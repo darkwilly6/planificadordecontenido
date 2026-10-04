@@ -1,0 +1,115 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Calendario de Contenido</title>
+<style>
+:root{--bg:#0a0a0a;--cd:#161616;--bd:#2c2c2c;--tx:#f1f1f1;--mu:#8d8d8d;--g:#d4af37}
+[data-t=light]{--bg:#fff;--cd:#faf7ee;--bd:#e4dcc3;--tx:#1b1b1b;--mu:#6d6d6d;--g:#a8851a}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:14px system-ui,sans-serif}
+header,nav,.tb{display:flex;gap:8px;align-items:center;padding:10px 14px;flex-wrap:wrap}
+header{border-bottom:1px solid var(--g)}.lg{color:var(--g);font-weight:700;letter-spacing:2px}.sp{flex:1}
+button,select,input,textarea{background:var(--cd);color:var(--tx);border:1px solid var(--bd);border-radius:8px;padding:7px 10px;font:inherit}
+button{cursor:pointer}button:hover,nav .on{border-color:var(--g);color:var(--g)}.gold{background:var(--g);color:#000!important;border:0;font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;padding:0 10px}.dh{text-align:center;color:var(--mu);padding:4px}
+.day{min-height:110px;background:var(--cd);border:1px solid var(--bd);border-radius:8px;padding:4px;min-width:0}.day.out{opacity:.4}.today{border-color:var(--g)}
+.dn{display:flex;justify-content:space-between;color:var(--mu);cursor:pointer;font-size:12px}.dn em{opacity:0;color:var(--g);font-style:normal}.dn:hover em{opacity:1}
+.chip{border-left:3px solid var(--c);background:var(--bg);border-radius:6px;padding:4px 6px;margin-top:4px;cursor:grab;font-size:12px}
+.ct{display:flex;gap:4px}.tt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}.fi{color:var(--c)}.ok{color:var(--g)}
+.tgs{display:flex;gap:3px;flex-wrap:wrap;margin-top:3px;align-items:center}
+i.tg{background:var(--c);color:#fff;font-style:normal;font-size:10px;padding:1px 6px;border-radius:9px;display:inline-block}i.tg:empty{width:8px;height:8px;padding:0}
+.im{font-style:normal;font-size:10px;border:1px solid var(--g);color:var(--g);border-radius:9px;padding:0 5px}.im3{background:var(--g);color:#000}.im0{opacity:.6}
+.sm{color:var(--mu);font-size:11px;margin-top:3px}.wk .day{min-height:260px}
+.ov{position:fixed;inset:0;background:#000a;display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:16px;z-index:9}
+.md{background:var(--bg);border:1px solid var(--g);border-radius:14px;padding:18px;width:100%;max-width:640px}
+.md label{display:block;margin:8px 0;color:var(--mu);font-size:12px}.md input,.md textarea,.md select{width:100%;margin-top:3px}.md textarea{min-height:70px}
+.md summary{color:var(--g);cursor:pointer;margin:10px 0}.seg{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 8px}.seg button.on{background:var(--c);border-color:var(--c);color:#fff}
+.row{display:flex;gap:8px;margin-top:10px}.r2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.mt{display:block;overflow-x:auto;font-size:11px}.mt input{padding:4px;min-width:70px}
+.auth{max-width:340px;margin:12vh auto;display:flex;flex-direction:column;gap:10px;padding:20px;text-align:center}.auth h1{color:var(--g);font-weight:300}.auth h1 span{color:var(--tx);font-size:.6em}.auth a{color:var(--g);cursor:pointer}#err{color:#f87171;min-height:1em}
+.empty{color:var(--mu);text-align:center;padding:30px}.list,.ideas,.res{max-width:760px;margin:auto;padding:10px}
+.lr{display:flex;gap:10px;align-items:flex-start;margin:6px 0}.lr b{width:60px;color:var(--g)}.lr .chip{flex:1;margin:0}
+.ir{display:flex;gap:8px;align-items:center;padding:8px;border-bottom:1px solid var(--bd)}.ir span{flex:1}.ir.u span{text-decoration:line-through;color:var(--mu)}.ideas .row input{flex:1}
+.br{display:flex;gap:8px;align-items:center;margin:4px 0}.br span{width:90px}.br div{flex:1;background:var(--cd);height:10px;border-radius:5px;overflow:hidden}.br i{display:block;height:100%}
+.lg2{display:flex;gap:10px;flex-wrap:wrap;padding:10px 14px;color:var(--mu);font-size:12px}.lg2 span{display:flex;gap:4px;align-items:center}.res h3{color:var(--g)}.nv{display:flex;gap:10px;align-items:center}
+@media(max-width:700px){.grid{gap:2px;padding:0 4px}.day{min-height:64px;padding:2px}.grid:not(.wk) .tt,.grid:not(.wk) .im{display:none}.wk{grid-template-columns:1fr}.chip{padding:3px}.dh{font-size:10px}}
+</style></head><body><div id="app"></div><div id="modal"></div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+// === PEGA AQUÍ LA CONFIGURACIÓN DE TU PROYECTO FIREBASE (ver README.md) ===
+const FIREBASE_CONFIG={apiKey:"PEGA_AQUI",authDomain:"",projectId:"",appId:""};
+// =========================================================================
+const MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'],DIAS=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+const FMT={reel:{n:'Reel',c:'#3b82f6',i:'▶'},carrusel:{n:'Carrusel',c:'#a855f7',i:'▦'},historia:{n:'Historia',c:'#ec4899',i:'◔'}};
+const TIPO={nicho:{n:'Nicho',c:'#14b8a6'},viral:{n:'Viral',c:'#f97316'}};
+const ENF={problema:{n:'Problema',c:'#ef4444'},solucion:{n:'Solución',c:'#22c55e'},mentalidad:{n:'Mentalidad',c:'#06b6d4'},producto:{n:'Producto',c:'#84cc16'}};
+const EST={reel:['Idea','Guionizado','Grabado','Editado','Programado','Publicado'],carrusel:['Idea','Estructurado','Ilustrado','Programado','Publicado'],historia:['Idea','Estructurado','Creada','Programado','Publicado']};
+const PLAT={ig:'Instagram',tt:'TikTok',yt:'YouTube Shorts'},MET=[['views','Alcance/vistas'],['likes','Likes'],['comments','Comentarios'],['saves','Guardados'],['shares','Compartidos']];
+const ERR={'auth/invalid-credential':'Correo o contraseña incorrectos','auth/email-already-in-use':'Ese correo ya tiene cuenta','auth/weak-password':'La contraseña debe tener mínimo 6 caracteres','auth/invalid-email':'Correo no válido'};
+const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ds=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'),pd=s=>{const[a,b,c]=s.split('-');return new Date(a,b-1,c)};
+const S={u:null,brands:[],b:null,P:[],I:[],v:'mes',d:new Date(),f:{format:'',tipo:'',estado:''}};let ub=null,up=[],E={};
+document.documentElement.dataset.t=localStorage.getItem('tema')||'dark';
+const theme=()=>{const t=document.documentElement.dataset.t==='light'?'dark':'light';document.documentElement.dataset.t=t;localStorage.setItem('tema',t)};
+if(FIREBASE_CONFIG.apiKey.startsWith('PEGA'))document.body.innerHTML='<p class=empty>Falta pegar la configuración de Firebase en index.html (ver README.md).</p>';
+else{firebase.initializeApp(FIREBASE_CONFIG);var auth=firebase.auth(),db=firebase.firestore();
+const bref=()=>db.collection('users').doc(S.u.uid).collection('brands');window.bref=bref;
+window.cref=n=>bref().doc(S.b.id).collection(n);
+auth.onAuthStateChanged(u=>{ub&&ub();up.forEach(f=>f());up=[];S.u=u;S.b=null;S.brands=[];if(!u){authUI();return}
+ub=bref().orderBy('creada').onSnapshot(s=>{S.brands=s.docs.map(d=>({id:d.id,...d.data()}));const c=S.b&&S.brands.find(b=>b.id===S.b.id);if(c){S.b=c;R()}else pick(localStorage.getItem('marca'))})});}
+function pick(id){const b=S.brands.find(x=>x.id===id)||S.brands[0];S.b=b||null;up.forEach(f=>f());up=[];S.P=[];S.I=[];if(!b){R();return}localStorage.setItem('marca',b.id);
+up.push(cref('pieces').onSnapshot(s=>{S.P=s.docs.map(d=>({id:d.id,...d.data()}));R()}));
+up.push(cref('ideas').orderBy('creada','desc').onSnapshot(s=>{S.I=s.docs.map(d=>({id:d.id,...d.data()}));if(S.v==='ideas')R()}));R()}
+function authUI(){let reg=false;const draw=()=>{$('#app').innerHTML=`<div class=auth><h1>Calendario<br><span>de Contenido</span></h1><input id=em type=email placeholder="Correo"><input id=pw type=password placeholder="Contraseña (mín. 6)"><button class=gold id=go>${reg?'Crear cuenta':'Iniciar sesión'}</button><p id=err></p><a id=sw>${reg?'¿Ya tienes cuenta? Inicia sesión':'¿Nuevo? Regístrate gratis'}</a></div>`;
+$('#sw').onclick=()=>{reg=!reg;draw()};$('#go').onclick=async()=>{try{const e=$('#em').value.trim(),p=$('#pw').value;reg?await auth.createUserWithEmailAndPassword(e,p):await auth.signInWithEmailAndPassword(e,p)}catch(x){$('#err').textContent=ERR[x.code]||'Error: '+x.code}}};draw()}
+// ---- Cálculos ----
+const tot=p=>{const t={};MET.forEach(([k])=>t[k]=Object.values(p.m||{}).reduce((a,x)=>a+(+x?.[k]||0),0));return t},has=p=>Object.values(tot(p)).some(v=>v>0);
+function impacto(p){if(!has(p))return null;const lim=new Date();lim.setDate(lim.getDate()-60);const B=S.P.filter(q=>q.format===p.format&&has(q)&&pd(q.date)>=lim),T=tot(p),r=[];
+MET.forEach(([k])=>{const a=B.reduce((s,q)=>s+tot(q)[k],0)/(B.length||1);if(a>0)r.push(T[k]/a)});if(!r.length)return null;
+const s=r.reduce((a,b)=>a+b)/r.length,n=s<.7?0:s<1.3?1:s<3?2:3;return{s,n,l:['Bajo','Medio','Alto','Muy alto'][n]}}
+// ---- Vistas ----
+const lun=d=>{const x=new Date(d);x.setDate(x.getDate()-((x.getDay()+6)%7));return x};
+const rango=()=>{const a=lun(S.d),b=new Date(a);b.setDate(b.getDate()+6);return a.getDate()+' '+MESES[a.getMonth()].slice(0,3)+' – '+b.getDate()+' '+MESES[b.getMonth()].slice(0,3)};
+const fp=()=>S.P.filter(p=>(!S.f.format||p.format===S.f.format)&&(!S.f.tipo||p.tipo===S.f.tipo)&&(!S.f.estado||p.estado===S.f.estado));
+const dayP=(k,L)=>L.filter(p=>p.date===k).sort((a,b)=>(a.hora||'').localeCompare(b.hora||''));
+function nav(n){S.d=S.v==='semana'?new Date(S.d.getFullYear(),S.d.getMonth(),S.d.getDate()+7*n):new Date(S.d.getFullYear(),S.d.getMonth()+n,1);R()}
+function R(){if(!S.u)return;$('#app').innerHTML=`<header><div class=lg>✦ CONTENIDO</div><select id=bs>${S.brands.map(b=>`<option value="${b.id}" ${S.b&&b.id===S.b.id?'selected':''}>${esc(b.name)}</option>`).join('')}</select><button onclick=brandM()>+ Marca</button><button onclick=brandM(1)>Perfil</button><span class=sp></span><button onclick=theme()>◐ Tema</button><button onclick=auth.signOut()>Salir</button></header>
+<nav>${[['mes','Mes'],['semana','Semana'],['lista','Lista'],['ideas','Ideas'],['resumen','Resumen']].map(([k,n])=>`<button class="${S.v===k?'on':''}" onclick="S.v='${k}';R()">${n}</button>`).join('')}</nav>${S.b?body():'<p class=empty>Crea tu primera marca para empezar.</p>'}`;
+const s=$('#bs');if(s)s.onchange=e=>pick(e.target.value);if(!S.b&&!$('#modal').innerHTML)brandM();if(S.v==='ideas')$('#ni')?.focus()}
+function body(){const v=S.v;return v==='ideas'?ideasV():v==='resumen'?resumenV():toolbar()+(v==='mes'?mesV():v==='semana'?semV():listV())}
+const sel=(k,l,o)=>`<select onchange="S.f.${k}=this.value;R()"><option value="">${l}</option>${Object.entries(o).map(([i,x])=>`<option value=${i} ${S.f[k]===i?'selected':''}>${x.n}</option>`).join('')}</select>`;
+function toolbar(){const t=S.v==='semana'?rango():MESES[S.d.getMonth()]+' '+S.d.getFullYear();return `<div class=tb><button onclick=nav(-1)>‹</button><b>${t}</b><button onclick=nav(1)>›</button><button onclick="S.d=new Date();R()">Hoy</button><span class=sp></span>${sel('format','Formato',FMT)}${sel('tipo','Tipo',TIPO)}<select onchange="S.f.estado=this.value;R()"><option value="">Estado</option>${[...new Set(Object.values(EST).flat())].map(e=>`<option ${S.f.estado===e?'selected':''}>${e}</option>`).join('')}</select></div>`}
+function chip(p,full){const F=FMT[p.format]||FMT.reel,im=impacto(p),tg=x=>x?`<i class=tg style="--c:${x.c}">${full?x.n:''}</i>`:'';
+return `<div class=chip draggable=true ondragstart="event.dataTransfer.setData('t','${p.id}')" onclick="edit('${p.id}')" style="--c:${F.c}"><div class=ct><span class=fi>${F.i}</span><span class=tt>${esc(p.tema||p.idea||'Sin tema')}</span>${p.estado==='Publicado'?'<span class=ok>✓</span>':''}</div><div class=tgs>${tg(TIPO[p.tipo])}${tg(ENF[p.enfoque])}${im?`<i class="im im${im.n}">${im.l}</i>`:''}</div>${full?`<div class=sm>${esc(F.n)} · ${esc(p.estado||'')}${p.hora?' · '+esc(p.hora):''}${p.angulo?'<br>Ángulo: '+esc(p.angulo):''}</div>`:''}</div>`}
+const cell=(d,L,full,out)=>{const k=ds(d);return `<div class="day ${out?'out':''} ${k===ds(new Date())?'today':''}" ondragover="event.preventDefault()" ondrop="drop(event,'${k}')"><div class=dn onclick="edit(null,'${k}')">${d.getDate()}<em>+</em></div>${dayP(k,L).map(p=>chip(p,full)).join('')}</div>`};
+const legend=()=>`<div class=lg2>${[FMT,TIPO,ENF].map(o=>Object.values(o).map(x=>`<span><i class=tg style="--c:${x.c}"></i>${x.n}</span>`).join('')).join('')}</div>`;
+function mesV(){const m=S.d,L=fp(),s=lun(new Date(m.getFullYear(),m.getMonth(),1));let h=DIAS.map(d=>`<div class=dh>${d}</div>`).join('');for(let i=0;i<42;i++){const d=new Date(s);d.setDate(s.getDate()+i);if(i>=35&&d.getMonth()!==m.getMonth())break;h+=cell(d,L,false,d.getMonth()!==m.getMonth())}return `<div class=grid>${h}</div>`+legend()}
+function semV(){const L=fp(),s=lun(S.d);let h='';for(let i=0;i<7;i++){const d=new Date(s);d.setDate(s.getDate()+i);h+=cell(d,L,true)}return `<div class="grid wk">${h}</div>`+legend()}
+function listV(){const m=ds(S.d).slice(0,7),L=fp().filter(p=>p.date.slice(0,7)===m).sort((a,b)=>(a.date+(a.hora||'')).localeCompare(b.date+(b.hora||'')));return `<div class=list>${L.length?L.map(p=>`<div class=lr><b>${pd(p.date).getDate()} ${DIAS[(pd(p.date).getDay()+6)%7]}</b>${chip(p,true)}</div>`).join(''):'<p class=empty>Sin piezas este mes.</p>'}</div>`}
+function ideasV(){return `<div class=ideas><div class=row><input id=ni placeholder="Escribe una idea y presiona Enter" onkeydown="if(event.key==='Enter')addI()"><button class=gold onclick=addI()>Agregar</button></div>${S.I.map((x,i)=>`<div class="ir ${x.usada?'u':''}"><input type=checkbox ${x.usada?'checked':''} onchange="cref('ideas').doc('${x.id}').update({usada:this.checked})"><span>${S.I.length-i}. ${esc(x.t)}</span><button onclick="cref('ideas').doc('${x.id}').delete()">✕</button></div>`).join('')}</div>`}
+const addI=()=>{const v=$('#ni').value.trim();if(v){cref('ideas').add({t:v,usada:false,creada:firebase.firestore.FieldValue.serverTimestamp()});$('#ni').value=''}};
+function resumenV(){const m=ds(S.d).slice(0,7),L=S.P.filter(p=>p.date.slice(0,7)===m),n=L.length||1,
+bar=(o,k)=>Object.entries(o).map(([i,x])=>{const c=L.filter(p=>p[k]===i).length;return `<div class=br><span>${x.n}</span><div><i style="width:${c/n*100}%;background:${x.c}"></i></div><b>${c}</b></div>`}).join(''),
+top=L.map(p=>({p,i:impacto(p)})).filter(x=>x.i).sort((a,b)=>b.i.s-a.i.s).slice(0,5);
+return `<div class=res><div class=nv><button onclick=nav(-1)>‹</button><b>${MESES[S.d.getMonth()]} ${S.d.getFullYear()}</b><button onclick=nav(1)>›</button></div><p>${L.length} piezas · ${L.filter(p=>p.estado==='Publicado').length} publicadas</p><h3>Nicho vs Viral</h3>${bar(TIPO,'tipo')}<h3>Enfoque</h3>${bar(ENF,'enfoque')}<h3>Formato</h3>${bar(FMT,'format')}<h3>Top contenido</h3>${top.length?top.map(x=>chip(x.p,true)).join(''):'<p class=empty>Aún no hay métricas registradas.</p>'}</div>`}
+// ---- Editor ----
+const closeM=()=>$('#modal').innerHTML='',drop=(e,k)=>{e.preventDefault();const id=e.dataTransfer.getData('t');id&&cref('pieces').doc(id).update({date:k})};
+const stOpts=(f,c)=>EST[f].map(e=>`<option ${e===c?'selected':''}>${e}</option>`).join('');
+const seg=(k,o)=>`<div class=seg>${Object.entries(o).map(([i,x])=>`<button data-k=${k} data-v=${i} class="${E[k]===i?'on':''}" style="--c:${x.c}" onclick="setE('${k}','${i}')">${x.n}</button>`).join('')}</div>`;
+function setE(k,v){E[k]=v;document.querySelectorAll(`[data-k=${k}]`).forEach(b=>b.classList.toggle('on',b.dataset.v===v));if(k==='format')$('#f_est').innerHTML=stOpts(v,'Idea')}
+function edit(id,date){const p=id?S.P.find(x=>x.id===id):{date,format:'reel',tipo:'nicho',enfoque:'problema',estado:'Idea',m:{}};if(!p)return;E={format:p.format,tipo:p.tipo,enfoque:p.enfoque};const v=k=>esc(p[k]),im=impacto(p);
+$('#modal').innerHTML=`<div class=ov><div class=md><h2>${id?'Editar pieza':'Nueva pieza'}</h2>
+<div class=r2><label>Fecha<input type=date id=f_date value="${v('date')}"></label><label>Hora de publicación<input type=time id=f_hora value="${v('hora')}"></label></div>
+<label>Formato</label>${seg('format',FMT)}<label>Tipo</label>${seg('tipo',TIPO)}<label>Enfoque</label>${seg('enfoque',ENF)}
+<label>Estado<select id=f_est>${stOpts(p.format,p.estado)}</select></label><label>Tema<input id=f_tema value="${v('tema')}"></label><label>Idea<textarea id=f_idea>${v('idea')}</textarea></label>
+<div class=r2><label>Ángulo<input id=f_ang value="${v('angulo')}"></label><label>CTA<input id=f_cta value="${v('cta')}"></label></div>
+<label>Referencia (link del video/idea de inspiración)<input id=f_ref value="${v('ref')}"></label><label>Descripción<textarea id=f_desc>${v('desc')}</textarea></label><label>Hashtags<input id=f_tags value="${v('tags')}"></label>
+<details><summary>Guion / estructura del carrusel</summary><textarea id=f_gu style="min-height:220px">${v('guion')}</textarea></details>
+<details ${has(p)?'open':''}><summary>Resultados ${im?'· Impacto: '+im.l:''}</summary><table class=mt><tr><th></th>${MET.map(([,n])=>`<th>${n}</th>`).join('')}</tr>${Object.entries(PLAT).map(([pk,pn])=>`<tr><td>${pn}</td>${MET.map(([k])=>`<td><input type=number min=0 id=m_${pk}_${k} value="${p.m?.[pk]?.[k]??''}"></td>`).join('')}</tr>`).join('')}</table></details>
+<div class=row><button class=gold onclick="save(${id?`'${id}'`:'null'})">Guardar</button>${id?`<button onclick="del('${id}')">Eliminar</button>`:''}<button onclick=closeM()>Cerrar</button></div></div></div>`}
+async function save(id){const g=i=>$('#'+i).value.trim(),m={};Object.keys(PLAT).forEach(pk=>{m[pk]={};MET.forEach(([k])=>m[pk][k]=+$(`#m_${pk}_${k}`).value||0)});
+const d={date:g('f_date'),hora:g('f_hora'),format:E.format,tipo:E.tipo,enfoque:E.enfoque,estado:$('#f_est').value,tema:g('f_tema'),idea:g('f_idea'),angulo:g('f_ang'),cta:g('f_cta'),guion:$('#f_gu').value,ref:g('f_ref'),desc:g('f_desc'),tags:g('f_tags'),m};
+if(!d.date)return alert('Elige una fecha');id?await cref('pieces').doc(id).update(d):await cref('pieces').add(d);closeM()}
+const del=id=>confirm('¿Eliminar esta pieza?')&&cref('pieces').doc(id).delete().then(closeM);
+function brandM(ed){const b=ed?S.b:{};if(ed&&!b)return;$('#modal').innerHTML=`<div class=ov><div class=md><h2>${ed?'Perfil de marca':'Nueva marca'}</h2><label>Nombre<input id=b_n value="${esc(b.name)}"></label><label>Producto<input id=b_p value="${esc(b.product)}"></label>${ed?`<label>Voz de marca<textarea id=b_v>${esc(b.voz)}</textarea></label><label>Público objetivo<textarea id=b_a>${esc(b.publico)}</textarea></label><label>Hashtags ancla<input id=b_h value="${esc(b.hashtags)}"></label>`:''}<div class=row><button class=gold onclick="saveB(${ed?1:0})">Guardar</button>${S.b?'<button onclick=closeM()>Cerrar</button>':''}</div></div></div>`}
+async function saveB(ed){const g=i=>$('#'+i)?.value.trim()||'',d={name:g('b_n'),product:g('b_p')};if(!d.name)return alert('Pon un nombre');
+if(ed){Object.assign(d,{voz:g('b_v'),publico:g('b_a'),hashtags:g('b_h')});await bref().doc(S.b.id).update(d)}
+else{d.creada=firebase.firestore.FieldValue.serverTimestamp();const r=bref().doc();localStorage.setItem('marca',r.id);S.b=null;await r.set(d)}closeM()}
+</script></body></html>
