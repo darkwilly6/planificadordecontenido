@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Calendario de Contenido</title><link rel="icon" type="image/png" href="favicon.png"><link rel="apple-touch-icon" href="favicon.png"><meta name="theme-color" content="#0a0a0a"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Calendario de Contenido</title><link rel="icon" type="image/png" href="favicon.png"><link rel="apple-touch-icon" href="favicon.png"><meta name="theme-color" content="#0a0a0a"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#070707;--cd:#121212;--bd:#2b2518;--tx:#f3efe4;--mu:#9a9486;--g:#d4af37;--gl:rgba(212,175,55,.42);--gs:rgba(212,175,55,.13)}
 [data-t=light]{--bg:#fbf8f0;--cd:#fff;--bd:#eadfb9;--tx:#1b1a16;--mu:#756f5f;--g:#a8851a;--gl:rgba(168,133,26,.45);--gs:rgba(168,133,26,.12)}
@@ -59,6 +59,92 @@ i.tg.no{background:none;border:1px dashed var(--mu);color:var(--mu)}i.tg.no:empt
 #cdn{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;font-size:30vmin;font-weight:800;color:var(--g);pointer-events:none;z-index:3}
 .tpc{display:flex;gap:14px;flex-wrap:wrap;align-items:center;justify-content:center;padding:12px;background:#000;border-top:1px solid #333}.tpc button{min-width:54px;font-size:18px}.tpc label{display:flex;gap:8px;align-items:center;color:var(--mu);font-size:12px}.tpc input[type=range]{padding:0;width:110px;accent-color:var(--g)}.tpc .ck input{width:18px;height:18px;accent-color:var(--g)}
 .danger{border-color:#ef4444;color:#ef4444}.danger:hover{background:#ef4444;color:#fff;border-color:#ef4444;box-shadow:0 0 14px rgba(239,68,68,.35)}
+/* ===== Optimización responsive (móvil, tablet y web) — solo presentación ===== */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{overflow-x:hidden;overflow-x:clip}
+#app{max-width:100%}
+button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.chip,.day,.lr>*,.gcard,.ir span,.gcard .r1 b{min-width:0}
+.chip{overflow:hidden}
+.ttl,.ir span,.gcard .r1 b,.gsn,.sm,.lr b,.md p,.md h2,.tph span{overflow-wrap:anywhere;word-break:break-word}
+.r1{flex-wrap:wrap;row-gap:3px}.r1 .fp{max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.dots{flex-wrap:wrap}
+.tgs{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.gcard .tgs .hr2,.gcard>.hr2{white-space:normal}
+.row{flex-wrap:wrap}.row input{min-width:0}
+.md{max-width:100%}.md input,.md select,.md textarea{max-width:100%}
+.md textarea,#sht{resize:vertical}
+.r2>label{min-width:0}
+.mt{-webkit-overflow-scrolling:touch;max-width:100%}
+header select{max-width:240px;text-overflow:ellipsis}
+.ov{overscroll-behavior:contain;padding-bottom:max(18px,env(safe-area-inset-bottom))}
+.tpc{padding-bottom:max(12px,env(safe-area-inset-bottom))}
+@media(hover:none){.dn em{opacity:.55}.free em{opacity:.8}.chip:hover{transform:none}}
+@media(min-width:701px) and (max-width:1100px){
+.wk{grid-template-columns:repeat(4,1fr)}
+.grid:not(.wk) .chip{padding:6px}
+.grid:not(.wk) .hr2{font-size:9px}
+}
+@media(max-width:700px){
+input,select,textarea{font-size:16px!important}
+button{min-height:40px}
+header{gap:6px;border-radius:16px;padding:10px}
+header .lg{font-size:15px;letter-spacing:2px;margin-right:0}
+header select{flex:1 1 140px;min-width:0;max-width:none}
+header .sp{display:none}
+header button{flex:1 1 auto;padding:8px 10px;font-size:12px}
+nav{display:flex;flex-wrap:wrap;gap:6px;padding:4px 8px 8px}
+nav button{flex:1 1 auto;padding:8px 10px;font-size:12px;white-space:nowrap}
+.tb{gap:6px;padding:6px 8px 10px}
+.tb .sp{display:none}
+.tb b{flex:1 1 0;min-width:120px;white-space:nowrap;text-align:center;font-size:16px;margin:0}
+.tb>button{padding:8px 12px}
+.tb select{flex:1 1 30%;min-width:0;padding:8px 26px 8px 10px;background-position:right 9px center}
+.tb button.danger,.tb button[onclick^=shareW]{flex:1 1 45%}
+.grid:not(.wk) .day{min-height:78px;border-radius:10px}
+.grid:not(.wk) .dn{font-size:11px;padding:2px 1px 0}
+.today .dn span{padding:1px 6px}
+.grid:not(.wk) .chip{margin-top:4px;padding:4px 3px;border-radius:8px}
+.grid:not(.wk) .r1{justify-content:center}
+.grid:not(.wk) .fp{padding:2px 5px;font-size:10px}
+.grid:not(.wk) .dots{gap:3px;margin-top:4px;justify-content:center}
+.grid:not(.wk) .dots i.tg:empty{width:8px;height:8px}
+.grid:not(.wk) .pbw,.grid:not(.wk) .dots .ok{flex:1 1 100%;margin:0;justify-content:center}
+.grid:not(.wk) .pb{flex:1;width:auto;max-width:46px}
+.lg2{gap:8px 12px;padding:10px 14px;font-size:11px}
+.wkh{padding:12px 12px 4px}.wkh b{font-size:19px}
+.wk{padding:6px;gap:8px}
+.wk .day{padding:10px}
+.wk .dh2{display:flex;justify-content:space-between;align-items:baseline;text-align:left}
+.wk .dh2 small{display:inline}
+.wk .free{min-height:64px;flex-direction:row}
+.wkf{gap:10px 18px;padding:10px 12px}
+.list,.ideas,.res{margin:10px 6px;padding:12px;border-radius:16px}
+.lr{gap:8px}.lr>b{width:auto;flex:0 0 100%}
+.lr .chip{min-width:0;flex:1 1 100%}
+.val{flex:1 1 100%;text-align:left}
+.ctl{flex:1 1 100%}.ctl input{flex:1;min-width:0}.ctl button{flex:1}
+.ir{padding:10px 4px}
+.br span{width:84px;font-size:12px}
+.res .nv b{flex:1;text-align:center}
+.gcard{padding:12px}
+.gcard .row button{flex:1 1 auto}
+.ov{padding:8px;padding-bottom:max(8px,env(safe-area-inset-bottom))}
+.md{padding:16px;border-radius:18px}
+.md h2{font-size:20px}
+.md .row button{flex:1 1 auto}
+.seg button,.stg button{min-height:36px}
+.mt{display:block;font-size:10px}.mt tbody{display:block}.mt tr{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;margin-bottom:6px}.mt th,.mt td{display:block;padding:0;min-width:0}.mt th{font-weight:600;font-size:8px;letter-spacing:-.2px;line-height:1.2;text-align:center;overflow-wrap:anywhere;align-self:end}.mt tr>:first-child{grid-column:1/-1;font-weight:700;color:var(--g);font-size:11px;letter-spacing:.5px}.mt tr:first-child>:first-child{display:none}.mt input{min-width:0;padding:8px 2px;text-align:center;-moz-appearance:textfield}.mt input::-webkit-inner-spin-button,.mt input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.auth{margin:10vh 12px;padding:24px 18px}
+.tph{padding:10px 12px;padding-top:max(10px,env(safe-area-inset-top))}
+.tpc{gap:10px}.tpc input[type=range]{width:96px}
+}
+@media(max-width:380px){
+.grid:not(.wk){padding:4px;gap:2px;margin:0 4px}
+.grid:not(.wk) .day{padding:2px}
+.grid:not(.wk) .fp{padding:2px 4px}
+.dh{font-size:8px}
+}
 </style></head><body><div id="app"></div><div id="modal"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
