@@ -34,21 +34,31 @@ function fxSubAcc(){if(!S.u||FX.accUid===S.u.uid)return;FX.accUid=S.u.uid;
   FX.accSub=db.collection('users').doc(S.u.uid).collection('accesos').onSnapshot(s=>{
     const keys=new Set(s.docs.map(d=>d.id));
     s.docs.forEach(d=>{if(FX.accMap[d.id])return;const a=d.data();
-      const unsub=db.collection('users').doc(a.ownerUid).collection('brands').doc(a.brandId).onSnapshot(b=>{
-        if(!b.exists){fxDropAcc(d.id);return}
-        if(FX.accMap[d.id])FX.accMap[d.id].brand={id:b.id,...b.data(),owner:a.ownerUid,accKey:d.id};
-        fxRefreshShared()},()=>fxDropAcc(d.id));
-      FX.accMap[d.id]={unsub,brand:null}});
-    Object.keys(FX.accMap).forEach(k=>{if(!keys.has(k))fxDropAcc(k,true)});
+      FX.accMap[d.id]={unsub:null,brand:null,retry:null};
+      FX.accMap[d.id].unsub=fxWatchBrand(d.id,a,0)});
+    Object.keys(FX.accMap).forEach(k=>{if(!keys.has(k))fxDropAcc(k,false)});
     fxRefreshShared()},()=>{});
 }
-function fxDropAcc(k,noBorrar){const e=FX.accMap[k];if(e&&e.unsub)e.unsub();delete FX.accMap[k];
-  if(!noBorrar&&S.u)db.collection('users').doc(S.u.uid).collection('accesos').doc(k).delete().catch(()=>{});
+// Escucha la marca del propietario. Si la lectura falla (por ejemplo, justo al aceptar,
+// antes de que el servidor guarde la membresía), reintenta: NUNCA borra el acceso por un error.
+function fxWatchBrand(key,a,intento){
+  return db.collection('users').doc(a.ownerUid).collection('brands').doc(a.brandId).onSnapshot(b=>{
+    const e=FX.accMap[key];if(!e)return;
+    e.brand=b.exists?{id:b.id,...b.data(),owner:a.ownerUid,accKey:key}:null;
+    fxRefreshShared()},()=>{
+    const e=FX.accMap[key];if(!e)return;e.brand=null;fxRefreshShared();
+    if(intento<6)e.retry=setTimeout(()=>{const x=FX.accMap[key];if(!x)return;x.unsub&&x.unsub();x.unsub=fxWatchBrand(key,a,intento+1)},1500*(intento+1))})}
+function fxDropAcc(k,borrar){const e=FX.accMap[k];if(e){e.unsub&&e.unsub();e.retry&&clearTimeout(e.retry)}delete FX.accMap[k];
+  if(borrar&&S.u)db.collection('users').doc(S.u.uid).collection('accesos').doc(k).delete().catch(()=>{});
   fxRefreshShared()}
 function fxRefreshShared(){FX.shared=Object.values(FX.accMap).map(x=>x.brand).filter(Boolean);
   if(!S.u)return;
   S.brands=S.brands.filter(b=>!b.owner).concat(FX.shared);
-  if(FX.pendingPick&&S.brands.some(b=>b.id===FX.pendingPick)){const id=FX.pendingPick;FX.pendingPick=null;pick(id);return}
+  if(FX.pendingPick&&S.brands.some(b=>b.id===FX.pendingPick)){const id=FX.pendingPick;FX.pendingPick=null;closeM();pick(id);return}
+  // Sin marca abierta (cuenta sin marcas propias) y llega una compartida: abrirla.
+  if(!S.b&&FX.shared.length){const m=$('#modal'),h=m&&m.querySelector('h2');
+    if(h&&h.textContent==='Nueva marca'&&![...m.querySelectorAll('input')].some(i=>i.value.trim()))closeM();
+    if(!$('#modal').innerHTML){pick(FX.shared[0].id);return}}
   if(S.b&&S.b.owner&&!S.brands.some(b=>b.id===S.b.id)){pick(null);return}
   R()}
 
@@ -58,9 +68,11 @@ function fxSubRol(){const k=S.b&&S.b.owner?S.b.owner+'/'+S.b.id:null;
   if(!k){FX.rol='owner';return}
   FX.rol='viewer';
   FX.rolSub=db.collection('users').doc(S.b.owner).collection('brands').doc(S.b.id).collection('miembros').doc(S.u.uid).onSnapshot(d=>{
+    // Solo se da por perdido el acceso cuando el SERVIDOR confirma que la membresía no existe.
+    if(!d.exists&&d.metadata&&d.metadata.fromCache)return;
     if(!d.exists){FX.rol='viewer';const ak=S.b.accKey||(S.b.owner+'_'+S.b.id);
       fxStatus('Ya no tienes acceso a «'+(S.b.name||'esta marca')+'»','err');
-      FX.rolSub&&FX.rolSub();FX.rolSub=null;FX.rolKey=null;fxDropAcc(ak);return}
+      FX.rolSub&&FX.rolSub();FX.rolSub=null;FX.rolKey=null;fxDropAcc(ak,true);return}
     FX.rol=d.data().rol==='editor'?'editor':'viewer';R()},()=>{FX.rol='viewer';R()});
 }
 
@@ -85,9 +97,11 @@ async function fxAcceptFlow(){FX.invChecked=true;const id=FX.invId,u=auth.curren
     <div class=row><button onclick="fxResend()">Reenviar verificación</button><button class=gold onclick="fxYaVerifique()">Ya verifiqué</button><button onclick="closeM()">Cerrar</button></div></div></div>`;return}
   if(!inv)return fxInfo('No encuentro esta invitación'+(err?' ('+(err.code||err.message)+')':'')+'. Revisa que entres con el correo al que se envió la invitación, y que el enlace esté completo.');
   if(inv.recipientEmail!==fxEmail())return fxInfo(`Esta invitación es para ${inv.recipientEmail}. Estás con otro correo: cierra sesión y entra con el correo invitado.`);
-  if(!u.emailVerified){FX.invChecked=false;
-    $('#modal').innerHTML=`<div class=ov><div class="md fxmd"><h2>Verifica tu correo</h2><p>Para aceptar una invitación necesitas verificar tu correo. Revisa tu bandeja (también spam).</p>
-    <div class=row><button onclick="fxResend()">Reenviar verificación</button><button class=gold onclick="fxYaVerifique()">Ya verifiqué</button><button onclick="closeM()">Cerrar</button></div></div></div>`;return}
+  // Recuperación: ya aceptaste esta invitación con esta cuenta → se rehace tu acceso y se abre la marca.
+  if(inv.status==='aceptada'&&inv.acceptedBy===u.uid){
+    FX.pendingPick=inv.brandId;FX.invId=null;history.replaceState(null,'',location.pathname);
+    try{await fxRun(db.collection('users').doc(u.uid).collection('accesos').doc(inv.ownerUid+'_'+inv.brandId).set({ownerUid:inv.ownerUid,brandId:inv.brandId,name:inv.brandName||'Marca compartida'}),'Abriendo «'+(inv.brandName||'la marca')+'»…')}catch(e){FX.pendingPick=null}
+    return}
   if(inv.status!=='pendiente')return fxInfo(`Esta invitación ya está ${inv.status==='aceptada'?'aceptada':inv.status==='revocada'?'revocada':'vencida'}.`);
   if(fxFechaMs(inv.expiresAt)<=Date.now())return fxInfo('Esta invitación venció. Pide al propietario una nueva.');
   FX.invPend=inv;
@@ -104,9 +118,12 @@ async function fxAccept(){const inv=FX.invPend,u=auth.currentUser;if(!inv||!u)re
   lote.update(db.collection('invitaciones').doc(inv.id),{status:'aceptada',acceptedBy:u.uid,aceptadaEl:firebase.firestore.FieldValue.serverTimestamp()});
   lote.set(db.collection('users').doc(inv.ownerUid).collection('brands').doc(inv.brandId).collection('miembros').doc(u.uid),{uid:u.uid,email:fxEmail(),rol:inv.rol,invId:inv.id,unidoEl:firebase.firestore.FieldValue.serverTimestamp()});
   lote.set(db.collection('users').doc(u.uid).collection('accesos').doc(inv.ownerUid+'_'+inv.brandId),{ownerUid:inv.ownerUid,brandId:inv.brandId,name:inv.brandName||'Marca compartida'});
+  // Se marca antes de guardar: la marca se abre en cuanto llegue, sin importar el orden de los datos.
+  FX.pendingPick=inv.brandId;
   try{await fxRun(lote.commit(),'Te uniste a la marca');
-    FX.invId=null;FX.invPend=null;history.replaceState(null,'',location.pathname);FX.pendingPick=inv.brandId;closeM();
-    FX.accUid=null;fxSubAcc()}catch(e){}}
+    FX.invId=null;FX.invPend=null;history.replaceState(null,'',location.pathname);closeM();
+    if(S.brands.some(b=>b.id===inv.brandId)){FX.pendingPick=null;pick(inv.brandId)}}
+  catch(e){FX.pendingPick=null}}
 
 // ---- Equipo en el perfil de marca ----
 const _brandM=brandM;
