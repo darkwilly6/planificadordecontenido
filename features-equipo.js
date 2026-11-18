@@ -78,8 +78,12 @@ pick=function(id){
 // ---- Invitación: aceptar (solo con correo verificado y correo igual al invitado) ----
 function fxInfo(msg){$('#modal').innerHTML=`<div class=ov><div class="md fxmd"><h2>Invitación</h2><p>${esc(msg)}</p><div class=row><button onclick="closeM()">Cerrar</button></div></div></div>`}
 async function fxAcceptFlow(){FX.invChecked=true;const id=FX.invId,u=auth.currentUser;if(!id||!u)return;
-  let inv=null;try{const d=await db.collection('invitaciones').doc(id).get();inv=d.exists?{id:d.id,...d.data()}:null}catch(e){inv=null}
-  if(!inv)return fxInfo('No encuentro esta invitación, o no tienes permiso para verla. Entra con el correo al que se envió.');
+  let inv=null,err=null;try{const d=await db.collection('invitaciones').doc(id).get();inv=d.exists?{id:d.id,...d.data()}:null}catch(e){err=e;inv=null}
+  // Las reglas solo permiten leer la invitación con correo verificado: primero se pide verificar.
+  if(!u.emailVerified){FX.invChecked=false;
+    $('#modal').innerHTML=`<div class=ov><div class="md fxmd"><h2>Verifica tu correo</h2><p>Para aceptar una invitación necesitas verificar tu correo. Pulsa «Reenviar verificación», abre el correo (revisa también spam) y luego pulsa «Ya verifiqué».</p>
+    <div class=row><button onclick="fxResend()">Reenviar verificación</button><button class=gold onclick="fxYaVerifique()">Ya verifiqué</button><button onclick="closeM()">Cerrar</button></div></div></div>`;return}
+  if(!inv)return fxInfo('No encuentro esta invitación'+(err?' ('+(err.code||err.message)+')':'')+'. Revisa que entres con el correo al que se envió la invitación, y que el enlace esté completo.');
   if(inv.recipientEmail!==fxEmail())return fxInfo(`Esta invitación es para ${inv.recipientEmail}. Estás con otro correo: cierra sesión y entra con el correo invitado.`);
   if(!u.emailVerified){FX.invChecked=false;
     $('#modal').innerHTML=`<div class=ov><div class="md fxmd"><h2>Verifica tu correo</h2><p>Para aceptar una invitación necesitas verificar tu correo. Revisa tu bandeja (también spam).</p>
