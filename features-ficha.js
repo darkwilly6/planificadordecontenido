@@ -19,7 +19,7 @@ function fxFichaIA(){
   const piezas=L.map(p=>({
     id:p.id,fecha:p.date,hora:p.hora||'',formato:et(FMT,p.format),tipo:et(TIPO,p.tipo),enfoque:et(ENF,p.enfoque),
     etapa_embudo:et(EMB,p.embudo),pilar:txt(p.pilar),categoria:txt(p.categoria),tema:txt(p.tema||p.idea),
-    angulo:txt(p.angulo),tipo_gancho:txt(p.tipogancho),hook:txt(p.hook),cta:txt(p.cta),palabra_clave:txt(p.keyword),
+    angulo:txt(p.angulo),oferta_destino:txt(p.oferta),tipo_gancho:txt(p.tipogancho),hook:txt(p.hook),cta:txt(p.cta),palabra_clave:txt(p.keyword),
     copy:txt(p.desc),hashtags:txt(p.tags),guion_o_estructura:String(p.guion||'').trim(),
     enlaces:Object.fromEntries(redes.map(k=>[k,(p.links&&p.links[k])||''])),
     metricas:redes.map(k=>{const m=qfM(p,k);return {red:QF_RED[k],con_datos:m.tiene,vistas:m.views,likes:m.likes,
@@ -138,7 +138,9 @@ function fxPromptClaude(){
     '- Palabra clave: '+(g('f_key')||'ninguna'),
     '- Enfoque: '+((ENF[E.enfoque]||{}).n||'—')+' · Etapa del embudo: '+((EMB[E.embudo]||{}).n||'—')+' · Pilar: '+(g('f_pilar')||'—')+' · Categoría: '+(g('f_cat')||'—'),
     '- Referencia: '+(g('f_ref')||'—'),
-    '- Objetivo: '+(g('f_obj')||'—')
+    '- Objetivo: '+(g('f_obj')||'—'),
+    '- Oferta de destino: '+(g('f_ofe')||'—'),
+    '- Tipo de contenido: '+((TIPO[E.tipo]||{}).n||'—')
   ];
   if(g('f_gu'))L.push('- Guion o estructura ya escrito (mejóralo): '+g('f_gu'));
   L.push('','REGLAS DEL GUION',FX_FMT_GUION[f]||FX_FMT_GUION.reel,'');
