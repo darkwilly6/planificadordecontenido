@@ -11,6 +11,8 @@ const IG_MET_STORY=[['views','reach','replies','shares','navigation'],['reach','
 FX.ig={doc:null,estado:null,hist:[],dias:30,cargadoKey:null};
 
 const igEsDueno=()=>!!(S.u&&S.b&&!S.b.owner);
+// Con token de usuario del sistema, «me» no es tu cuenta: se usa el ID de la cuenta de Instagram.
+const igNodo=()=>(FX.ig.doc&&FX.ig.doc.igUserId)||'me';
 const igRef=()=>db.collection('users').doc(S.u.uid).collection('instagram').doc(S.b.id);
 // Prueba primero graph.instagram.com y, si el token no es de ahí, graph.facebook.com (tokens de usuario del sistema).
 async function igGet(ruta,params,token){
@@ -50,13 +52,13 @@ async function igCargar(forzar){if(!S.u||!S.b)return;const key=S.u.uid+'|'+S.b.i
 async function igCargarHist(){try{const s=await cref('ig_historias').get();
   FX.ig.hist=fxDocs(s).sort((a,b)=>(b.fecha+(b.hora||'')).localeCompare(a.fecha+(a.hora||''))).slice(0,80)}catch(e){FX.ig.hist=[]}}
 
-async function igMe(t){try{return await igGet('me',{fields:'user_id,username,account_type'},t)}
-  catch(e){if(e.code===190||e.code==='red')throw e;return igGet('me',{fields:'id,username'},t)}}
-async function igConectar(){const t=($('#ig_tok').value||'').trim();
+async function igMe(t,id){const nodo=id||'me';try{return await igGet(nodo,{fields:'user_id,username,account_type'},t)}
+  catch(e){if(e.code===190||e.code==='red')throw e;return igGet(nodo,{fields:'id,username'},t)}}
+async function igConectar(){const t=($('#ig_tok').value||'').trim();const idManual=($('#ig_id').value||'').trim();
   if(t.length<20)return alert('Pega el token completo que generaste en Meta.');
   fxStatus('Comprobando el token…','warn');
-  try{const me=await igMe(t),ahora=Date.now();
-    await fxRun(igRef().set({token:t,igUserId:String(me.user_id||me.id||''),username:me.username||'',tipo:me.account_type||'',conectadoMs:ahora,renovadoMs:ahora,expiraMs:ahora+60*IG_DIA}),'Instagram conectado: @'+(me.username||''));
+  try{const me=await igMe(t,idManual),ahora=Date.now();
+    await fxRun(igRef().set({token:t,igUserId:String(idManual||me.user_id||me.id||''),username:me.username||'',tipo:me.account_type||'',conectadoMs:ahora,renovadoMs:ahora,expiraMs:ahora+60*IG_DIA}),'Instagram conectado: @'+(me.username||''));
     await cref('ig_estado').doc('ultimo').set({username:me.username||'',conectadoMs:ahora,error:''}).catch(()=>{});
     igCargar(true)}
   catch(e){fxStatus('No se pudo conectar: '+igMsgError(e),'err')}}
@@ -79,7 +81,7 @@ function igEmparejar(items){const usadas=new Set();const cuenta={enlace:0,copy:0
   return cuenta}
 async function igActualizar(){const d=FX.ig.doc;if(!d||!d.token)return alert('Conecta Instagram primero.');
   const desde=Date.now()-FX.ig.dias*IG_DIA;fxStatus('Leyendo publicaciones de Instagram…','warn');
-  try{const media=[];let r=await igGet('me/media',{fields:'id,caption,media_type,media_product_type,permalink,timestamp,like_count,comments_count',limit:'50'},d.token),pag=0;
+  try{const media=[];let r=await igGet(igNodo()+'/media',{fields:'id,caption,media_type,media_product_type,permalink,timestamp,like_count,comments_count',limit:'50'},d.token),pag=0;
     while(true){(r.data||[]).forEach(m=>media.push(m));const ult=r.data&&r.data[r.data.length-1];pag++;
       if(!ult||Date.parse(ult.timestamp)<desde||!(r.paging&&r.paging.next)||pag>=10)break;r=await igGet(r.paging.next)}
     const recientes=media.filter(m=>Date.parse(m.timestamp)>=desde&&m.media_product_type!=='STORY');
@@ -100,7 +102,7 @@ async function igActualizar(){const d=FX.ig.doc;if(!d||!d.token)return alert('Co
 // ---- Historias: solo dan métricas mientras están activas (24 h) ----
 async function igCapturarHistorias(){const d=FX.ig.doc;if(!d||!d.token)return alert('Conecta Instagram primero.');
   fxStatus('Leyendo historias activas…','warn');
-  try{const r=await igGet('me/stories',{fields:'id,media_type,permalink,timestamp'},d.token);const L=r.data||[];
+  try{const r=await igGet(igNodo()+'/stories',{fields:'id,media_type,permalink,timestamp'},d.token);const L=r.data||[];
     await igCargarHist();
     for(const s of L){const o=await igInsights(s.id,d.token,IG_MET_STORY),f=igFechaLocal(s.timestamp),prev=FX.ig.hist.find(h=>h.id===s.id);
       const datos={mediaId:s.id,fecha:f.date,hora:f.hora,permalink:s.permalink||'',tipo:s.media_type||'',metricas:o,actualizadoMs:Date.now(),fuente:'app'};
@@ -128,6 +130,7 @@ function igV(){if(FX.ig.cargadoKey!==(S.u&&S.b?S.u.uid+'|'+S.b.id:'')){igCargar(
     <li>En «Roles de la app → Probadores de Instagram» agrega esta cuenta y acepta la invitación en Instagram (Configuración → Apps y sitios web).</li>
     <li>En «Generar tokens de acceso» entra con esta cuenta y copia el token.</li><li>Pégalo aquí. Se guarda solo en tu cuenta: tus colaboradores no lo ven.</li></ol>
     <label>Token de acceso<input id=ig_tok type=password autocomplete=off placeholder="Pega aquí el token"></label>
+    <label>ID de la cuenta de Instagram (si Meta lo muestra en el paso 2)<input id=ig_id placeholder="Ej: 17841400000000000"></label>
     <div class=row><button class=gold onclick="igConectar()">Conectar Instagram</button></div></details>`;
   else if(dueno&&d)con=`<div class=fxcards><div class=fxcard2><small>Cuenta conectada</small><b>@${esc(d.username||'')}</b><span>${esc(d.tipo||'')}</span></div>
     <div class=fxcard2><small>Token</small><b>${vence==null?'—':vence<=0?'Vencido':vence+' días'}</b><span>${vence!=null&&vence<=0?'Genera uno nuevo y vuelve a conectar':'Se renueva solo al abrir la app o con la tarea de GitHub'}</span></div>

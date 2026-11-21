@@ -59,7 +59,7 @@ export async function sincronizar({ db, fetch, ahora = Date.now(), log = console
         await doc.ref.update(nuevo); d = { ...d, ...nuevo }; resumen.renovados++;
       }
       // Historias activas
-      const st = await igGet(fetch, 'me/stories', { fields: 'id,media_type,permalink,timestamp' }, d.token);
+      const st = await igGet(fetch, (d.igUserId || 'me') + '/stories', { fields: 'id,media_type,permalink,timestamp' }, d.token);
       let nh = 0;
       for (const s of st.data || []) {
         const m = await insights(fetch, s.id, d.token, MET_STORY), f = fechaLocal(Date.parse(s.timestamp));
@@ -67,7 +67,7 @@ export async function sincronizar({ db, fetch, ahora = Date.now(), log = console
         nh++;
       }
       // Publicaciones recientes ya vinculadas a una pieza (por enlace)
-      const media = await igGet(fetch, 'me/media', { fields: 'id,permalink,timestamp,media_type,media_product_type,like_count,comments_count', limit: '25' }, d.token);
+      const media = await igGet(fetch, (d.igUserId || 'me') + '/media', { fields: 'id,permalink,timestamp,media_type,media_product_type,like_count,comments_count', limit: '25' }, d.token);
       const recientes = (media.data || []).filter(m => m.media_product_type !== 'STORY' && ahora - Date.parse(m.timestamp) <= 7 * DIA);
       let np = 0;
       if (recientes.length) {
