@@ -52,7 +52,7 @@ function infBody(){const D=infDatos(),r=D.r,I=FX.inf,B=I.bloques,redes=infRedes(
       cuerpo=hs.map(x=>`<div class=inf-h><b>${esc(x.titulo)}</b><p>${esc(x.texto)}</p>${x.ev?`<p class=fxnote>${esc(x.ev)}</p>`:''}${x.conf?`<p class=fxnote>Confianza orientativa: ${esc(x.conf)}</p>`:''}</div>`).join('')||'<p class=fxnote>Sin hallazgos en este período.</p>'}
     out+=`<div class=sec>${h('Hallazgos de «Qué funciona»')}${cuerpo}</div>`}
 
-  if(B.objetivos){if(D.r.mensual){const c=objCalc(D.r.mes),mt=((S.b.objetivos||{}).metas||[]).filter(m=>m.periodo===D.r.mes);
+  if(B.objetivos&&FX.perm&&FX.perm.cash){if(D.r.mensual){const c=objCalc(D.r.mes),mt=((S.b.objetivos||{}).metas||[]).filter(m=>m.periodo===D.r.mes);
     out+=`<div class=sec>${h('Objetivos comerciales del mes')}<table><tr><th>Indicador</th><th>Valor</th></tr>
     <tr><td>Ingresos atribuidos</td><td>${objMoneyTxt(c.ingAtr,mon)}</td></tr><tr><td>Ingresos sin atribuir</td><td>${objMoneyTxt(c.ingSin,mon)}</td></tr>
     <tr><td>Costos registrados</td><td>${c.gastosMon?objMoneyTxt(c.costos,mon):'No disponible'}</td></tr><tr><td>ROI atribuible estimado</td><td>${c.roi!=null?pctTxt(c.roi):'No calculable'}</td></tr></table>

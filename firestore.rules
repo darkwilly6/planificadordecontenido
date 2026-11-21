@@ -1,6 +1,7 @@
 rules_version = '2';
-// Calendario de Contenido — reglas con roles por marca (Etapa 5).
-// Propietario: control total de su marca. Editor: contenido. Lector: solo lectura.
+// Calendario de Contenido — reglas con roles y permisos por marca.
+// Propietario: control total. Editor: contenido. Lector: solo lectura.
+// Permisos extra por colaborador: verLeads (leads y agendas) y verCash (ventas, pagos, ingresos y gastos).
 // Las rutas NO cambian: users/{propietario}/brands/{marca}/... (sin migración de datos).
 service cloud.firestore {
   match /databases/(default)/documents {
@@ -15,19 +16,26 @@ service cloud.firestore {
     function correoVerificado() {
       return estaLogueado() && request.auth.token.email_verified == true;
     }
+    function rutaMiembro(owner, marca) {
+      return /databases/(default)/documents/users/$(owner)/brands/$(marca)/miembros/$(request.auth.uid);
+    }
     function esMiembro(owner, marca) {
-      return estaLogueado() &&
-        exists(/databases/(default)/documents/users/$(owner)/brands/$(marca)/miembros/$(request.auth.uid));
+      return estaLogueado() && exists(rutaMiembro(owner, marca));
     }
     function esEditor(owner, marca) {
-      return esMiembro(owner, marca) &&
-        get(/databases/(default)/documents/users/$(owner)/brands/$(marca)/miembros/$(request.auth.uid)).data.rol == 'editor';
+      return esMiembro(owner, marca) && get(rutaMiembro(owner, marca)).data.rol == 'editor';
+    }
+    function tienePermiso(owner, marca, campo) {
+      return esMiembro(owner, marca) && get(rutaMiembro(owner, marca)).data.get(campo, false) == true;
     }
     function puedeLeerMarca(owner, marca) {
       return esMio(owner) || esMiembro(owner, marca);
     }
     function puedeEditarContenido(owner, marca) {
       return esMio(owner) || esEditor(owner, marca);
+    }
+    function invitacionDespues(invId) {
+      return getAfter(/databases/(default)/documents/invitaciones/$(invId)).data;
     }
 
     // ---- Cuenta propia (datos privados: marcas, accesos, todo lo del propietario) ----
@@ -45,29 +53,64 @@ service cloud.firestore {
       allow read: if esMio(owner) || request.auth.uid == miembro;
       allow create: if estaLogueado()
         && request.auth.uid == miembro
+        && request.auth.token.email_verified == true
+        && request.resource.data.keys().hasOnly(['uid', 'email', 'rol', 'verLeads', 'verCash', 'invId', 'unidoEl'])
         && request.resource.data.uid == miembro
         && request.resource.data.rol in ['editor', 'viewer']
-        && request.auth.token.email_verified == true
-        && getAfter(/databases/(default)/documents/invitaciones/$(request.resource.data.invId)).data.status == 'aceptada'
-        && getAfter(/databases/(default)/documents/invitaciones/$(request.resource.data.invId)).data.ownerUid == owner
-        && getAfter(/databases/(default)/documents/invitaciones/$(request.resource.data.invId)).data.brandId == marca
-        && getAfter(/databases/(default)/documents/invitaciones/$(request.resource.data.invId)).data.rol == request.resource.data.rol
-        && getAfter(/databases/(default)/documents/invitaciones/$(request.resource.data.invId)).data.recipientEmail == request.auth.token.email.lower();
-      // Solo el propietario cambia el rol; el editor no puede escalar su propio documento.
+        && invitacionDespues(request.resource.data.invId).status == 'aceptada'
+        && invitacionDespues(request.resource.data.invId).ownerUid == owner
+        && invitacionDespues(request.resource.data.invId).brandId == marca
+        && invitacionDespues(request.resource.data.invId).rol == request.resource.data.rol
+        && invitacionDespues(request.resource.data.invId).recipientEmail == request.auth.token.email.lower()
+        // Los permisos de leads y dinero son exactamente los de la invitación.
+        && request.resource.data.get('verLeads', false) == invitacionDespues(request.resource.data.invId).get('verLeads', false)
+        && request.resource.data.get('verCash', false) == invitacionDespues(request.resource.data.invId).get('verCash', false);
+      // Solo el propietario cambia rol y permisos; el colaborador no puede escalar su propio documento.
       allow update: if esMio(owner)
         && request.resource.data.uid == resource.data.uid
-        && request.resource.data.rol in ['editor', 'viewer'];
+        && request.resource.data.rol in ['editor', 'viewer']
+        && request.resource.data.get('verLeads', false) is bool
+        && request.resource.data.get('verCash', false) is bool;
       // El propietario quita acceso; el miembro puede salir de la marca.
       allow delete: if esMio(owner) || request.auth.uid == miembro;
     }
 
-    // ---- Contenido de la marca (piezas, ideas, plantillas, movimientos, gastos...) ----
+    // ---- Contenido general (piezas, ideas, plantillas...) ----
     // Lectores: solo lectura. Editores y propietario: crear, editar y eliminar.
-    // La matriz no distingue "eliminar una pieza" de "eliminar semana"; esa acción
-    // se limita en la interfaz al propietario (ver documentación).
+    // Leads y dinero NO entran aquí: tienen reglas propias más abajo.
     match /users/{owner}/brands/{marca}/{coleccion}/{docId} {
-      allow read: if coleccion != 'miembros' && puedeLeerMarca(owner, marca);
-      allow create, update, delete: if coleccion != 'miembros' && puedeEditarContenido(owner, marca);
+      allow read: if !(coleccion in ['miembros', 'crm_leads', 'crm_agendas', 'crm_ventas', 'crm_pagos', 'movimientos', 'gastos'])
+        && puedeLeerMarca(owner, marca);
+      allow create, update, delete: if !(coleccion in ['miembros', 'crm_leads', 'crm_agendas', 'crm_ventas', 'crm_pagos', 'movimientos', 'gastos'])
+        && puedeEditarContenido(owner, marca);
+    }
+
+    // ---- Leads y agendas: propietario, o colaborador con permiso verLeads ----
+    match /users/{owner}/brands/{marca}/crm_leads/{docId} {
+      allow read: if esMio(owner) || tienePermiso(owner, marca, 'verLeads');
+      allow create, update, delete: if esMio(owner) || (esEditor(owner, marca) && tienePermiso(owner, marca, 'verLeads'));
+    }
+    match /users/{owner}/brands/{marca}/crm_agendas/{docId} {
+      allow read: if esMio(owner) || tienePermiso(owner, marca, 'verLeads');
+      allow create, update, delete: if esMio(owner) || (esEditor(owner, marca) && tienePermiso(owner, marca, 'verLeads'));
+    }
+
+    // ---- Dinero: ventas, pagos, ingresos y gastos: propietario, o colaborador con permiso verCash ----
+    match /users/{owner}/brands/{marca}/crm_ventas/{docId} {
+      allow read: if esMio(owner) || tienePermiso(owner, marca, 'verCash');
+      allow create, update, delete: if esMio(owner) || (esEditor(owner, marca) && tienePermiso(owner, marca, 'verCash'));
+    }
+    match /users/{owner}/brands/{marca}/crm_pagos/{docId} {
+      allow read: if esMio(owner) || tienePermiso(owner, marca, 'verCash');
+      allow create, update, delete: if esMio(owner) || (esEditor(owner, marca) && tienePermiso(owner, marca, 'verCash'));
+    }
+    match /users/{owner}/brands/{marca}/movimientos/{docId} {
+      allow read: if esMio(owner) || tienePermiso(owner, marca, 'verCash');
+      allow create, update, delete: if esMio(owner) || (esEditor(owner, marca) && tienePermiso(owner, marca, 'verCash'));
+    }
+    match /users/{owner}/brands/{marca}/gastos/{docId} {
+      allow read: if esMio(owner) || tienePermiso(owner, marca, 'verCash');
+      allow create, update, delete: if esMio(owner) || (esEditor(owner, marca) && tienePermiso(owner, marca, 'verCash'));
     }
 
     // ---- Invitaciones (raíz) ----
@@ -81,17 +124,19 @@ service cloud.firestore {
         && exists(/databases/(default)/documents/users/$(request.auth.uid)/brands/$(request.resource.data.brandId))
         && request.resource.data.status == 'pendiente'
         && request.resource.data.rol in ['editor', 'viewer']
+        && request.resource.data.get('verLeads', false) is bool
+        && request.resource.data.get('verCash', false) is bool
         && request.resource.data.recipientEmail == request.resource.data.recipientEmail.lower()
         && request.resource.data.recipientEmail.matches('.+@.+')
         && request.resource.data.expiresAt > request.time
         && request.resource.data.expiresAt < request.time + duration.value(30, 'd')
-        && request.resource.data.keys().hasOnly(['ownerUid', 'brandId', 'brandName', 'recipientEmail', 'rol', 'status', 'invitedBy', 'creadoEl', 'expiresAt']);
+        && request.resource.data.keys().hasOnly(['ownerUid', 'brandId', 'brandName', 'recipientEmail', 'rol', 'verLeads', 'verCash', 'status', 'invitedBy', 'creadoEl', 'expiresAt']);
       allow update: if (
           estaLogueado() && resource.data.ownerUid == request.auth.uid
           && request.resource.data.ownerUid == resource.data.ownerUid
           && resource.data.status == 'pendiente'
           && request.resource.data.status in ['pendiente', 'revocada']
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'rol', 'revocadaEl'])
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'rol', 'verLeads', 'verCash', 'revocadaEl'])
         ) || (
           correoVerificado() && resource.data.recipientEmail == request.auth.token.email.lower()
           && resource.data.status == 'pendiente'

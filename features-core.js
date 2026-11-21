@@ -37,8 +37,7 @@ function fxSafeRender(){if(!S.u||!S.b)return;const a=document.activeElement;
 const _pick=pick;
 pick=function(id){FX.T=[];FX.M=[];FX.G=[];_pick(id);if(!S.u||!S.b)return;
   up.push(cref('plantillas').onSnapshot(s=>{FX.T=fxDocs(s);fxSafeRender()},e=>fxStatus('Error al leer plantillas: '+e.message,'err')));
-  up.push(cref('movimientos').onSnapshot(s=>{FX.M=fxDocs(s);fxSafeRender()},e=>fxStatus('Error al leer movimientos: '+e.message,'err')));
-  up.push(cref('gastos').onSnapshot(s=>{FX.G=fxDocs(s);fxSafeRender()},e=>fxStatus('Error al leer gastos: '+e.message,'err')));
+  // Movimientos y gastos (dinero) se suscriben en features-crm.js solo si hay permiso de ver dinero.
 };
 
 // ---- Almacenamiento local de imágenes (IndexedDB). Firestore nunca guarda binarios. ----

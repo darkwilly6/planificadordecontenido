@@ -192,7 +192,7 @@ const fp=()=>S.P.filter(p=>(!S.f.format||p.format===S.f.format)&&(!S.f.tipo||p.t
 const dayP=(k,L)=>L.filter(p=>p.date===k).sort((a,b)=>(a.hora||'').localeCompare(b.hora||''));
 function nav(n){S.d=S.v==='semana'?new Date(S.d.getFullYear(),S.d.getMonth(),S.d.getDate()+7*n):new Date(S.d.getFullYear(),S.d.getMonth()+n,1);R()}
 function R(){if(!S.u)return;$('#app').innerHTML=`<header><div class=lg>✦ CONTENIDO</div><select id=bs>${S.brands.map(b=>`<option value="${b.id}" ${S.b&&b.id===S.b.id?'selected':''}>${esc(b.name)}</option>`).join('')}</select><button onclick=brandM()>+ Marca</button><button onclick=brandM(1)>Perfil</button><button onclick=plantillasM()>Plantillas</button><span class=sp></span><input type=file id=xf accept=".xlsx,.xls,.csv" hidden onchange="impF(this)"><button onclick="$('#xf').click()">⬆ Importar</button><button onclick=expX()>⬇ Excel</button><button onclick=ytAll() title="Actualizar métricas de YouTube Shorts">↻ YouTube</button><button onclick=theme()>◐ Tema</button><button onclick=auth.signOut()>Salir</button></header>
-<nav>${[['mes','Mes'],['semana','Semana'],['lista','Lista'],['ideas','Ideas'],['guiones','Guiones'],['resumen','Resumen'],['reut','Reutilizar'+(reutN()?' ('+reutN()+')':'')],['pend','No publicados'+(pendN()?' ('+pendN()+')':'')]].map(([k,n])=>`<button class="${S.v===k?'on':''}" onclick="S.v='${k}';R()">${n}</button>`).join('')}</nav>${S.b?body():'<p class=empty>Crea tu primera marca para empezar.</p>'}`;
+<nav>${[['mes','Mes'],['semana','Semana'],['lista','Lista'],['ideas','Ideas'],['guiones','Guiones'],['resumen','Resumen'],['reut','Reutilizar'+(reutN()?' ('+reutN()+')':'')],['pend','No publicados'+(pendN()?' ('+pendN()+')':'')],['crm','CRM']].map(([k,n])=>`<button class="${S.v===k?'on':''}" onclick="S.v='${k}';R()">${n}</button>`).join('')}</nav>${S.b?body():'<p class=empty>Crea tu primera marca para empezar.</p>'}`;
 const s=$('#bs');if(s)s.onchange=e=>pick(e.target.value);if(!S.b&&!$('#modal').innerHTML)brandM();if(S.v==='ideas')$('#ni')?.focus()}
 function body(){const v=S.v;return v==='ideas'?ideasV():v==='resumen'?resumenV():v==='pend'?pendV():v==='reut'?reutV():v==='guiones'?guionesV():toolbar()+(v==='mes'?mesV():v==='semana'?semV():listV())}
 const sel=(k,l,o)=>`<select onchange="S.f.${k}=this.value;R()"><option value="">${l}</option>${Object.entries(o).map(([i,x])=>`<option value=${i} ${S.f[k]===i?'selected':''}>${x.n}</option>`).join('')}</select>`;
@@ -395,4 +395,5 @@ else{const ok=()=>{const x=b.textContent;b.textContent='✓ Copiado';setTimeout(
 <script src="features-analitica.js"></script>
 <script src="features-informes.js"></script>
 <script src="features-equipo.js"></script>
+<script src="features-crm.js"></script>
 </body></html>

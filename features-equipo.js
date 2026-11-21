@@ -4,7 +4,7 @@
 // con su rol: esa es la fuente de verdad. Las reglas (firestore.rules) hacen cumplir los
 // permisos; la interfaz los refleja y, además, bloquea escrituras en modo lectura.
 
-FX.rol='owner';FX.rolKey=null;FX.rolSub=null;FX.accMap={};FX.accUid=null;FX.accSub=null;FX.eqSubs=[];FX.miem=[];FX.invs=[];FX.invPend=null;FX.invChecked=false;FX.pendingPick=null;
+FX.rol='owner';FX.perm={leads:true,cash:true};FX.rolKey=null;FX.rolSub=null;FX.accMap={};FX.accUid=null;FX.accSub=null;FX.eqSubs=[];FX.miem=[];FX.invs=[];FX.invPend=null;FX.invChecked=false;FX.pendingPick=null;
 FX.invId=null;try{FX.invId=new URLSearchParams(location.search).get('inv')}catch(e){}
 const FX_ROL_TXT={owner:'Propietario',editor:'Editor',viewer:'Solo lectura'};
 const fxOwner=()=>(S.b&&S.b.owner)||(S.u&&S.u.uid);
@@ -65,25 +65,26 @@ function fxRefreshShared(){FX.shared=Object.values(FX.accMap).map(x=>x.brand).fi
 // ---- Rol en la marca abierta (documento de membresía) ----
 function fxSubRol(){const k=S.b&&S.b.owner?S.b.owner+'/'+S.b.id:null;
   if(k===FX.rolKey)return;FX.rolKey=k;FX.rolSub&&FX.rolSub();FX.rolSub=null;
-  if(!k){FX.rol='owner';return}
-  FX.rol='viewer';
+  if(!k){FX.rol='owner';FX.perm={leads:true,cash:true};return}
+  FX.rol='viewer';FX.perm={leads:false,cash:false};
   FX.rolSub=db.collection('users').doc(S.b.owner).collection('brands').doc(S.b.id).collection('miembros').doc(S.u.uid).onSnapshot(d=>{
     // Solo se da por perdido el acceso cuando el SERVIDOR confirma que la membresía no existe.
     if(!d.exists&&d.metadata&&d.metadata.fromCache)return;
     if(!d.exists){FX.rol='viewer';const ak=S.b.accKey||(S.b.owner+'_'+S.b.id);
       fxStatus('Ya no tienes acceso a «'+(S.b.name||'esta marca')+'»','err');
       FX.rolSub&&FX.rolSub();FX.rolSub=null;FX.rolKey=null;fxDropAcc(ak,true);return}
-    FX.rol=d.data().rol==='editor'?'editor':'viewer';R()},()=>{FX.rol='viewer';R()});
+    const md=d.data();FX.rol=md.rol==='editor'?'editor':'viewer';
+    FX.perm={leads:md.verLeads===true,cash:md.verCash===true};fxSubCRM();R()},()=>{FX.rol='viewer';FX.perm={leads:false,cash:false};fxSubCRM();R()});
 }
 
 const _pick2=pick;
 pick=function(id){
   const tgt=S.brands.find(x=>x.id===id)||S.brands[0];
   const tk=tgt&&tgt.owner?tgt.owner+'/'+tgt.id:null;
-  if(tk!==FX.rolKey)FX.rol=tk?'viewer':'owner';
+  if(tk!==FX.rolKey){FX.rol=tk?'viewer':'owner';FX.perm=tk?{leads:false,cash:false}:{leads:true,cash:true}}
   _pick2(id);
   if(!S.u)return;
-  fxSubAcc();fxSubRol();
+  fxSubAcc();fxSubRol();fxSubCRM();
   if(FX.invId&&!FX.invChecked&&auth.currentUser)fxAcceptFlow();
 };
 
@@ -116,7 +117,7 @@ function fxRechazar(){closeM();FX.invId=null;FX.invPend=null;history.replaceStat
 async function fxAccept(){const inv=FX.invPend,u=auth.currentUser;if(!inv||!u)return;
   const lote=db.batch();
   lote.update(db.collection('invitaciones').doc(inv.id),{status:'aceptada',acceptedBy:u.uid,aceptadaEl:firebase.firestore.FieldValue.serverTimestamp()});
-  lote.set(db.collection('users').doc(inv.ownerUid).collection('brands').doc(inv.brandId).collection('miembros').doc(u.uid),{uid:u.uid,email:fxEmail(),rol:inv.rol,invId:inv.id,unidoEl:firebase.firestore.FieldValue.serverTimestamp()});
+  lote.set(db.collection('users').doc(inv.ownerUid).collection('brands').doc(inv.brandId).collection('miembros').doc(u.uid),{uid:u.uid,email:fxEmail(),rol:inv.rol,verLeads:inv.verLeads===true,verCash:inv.verCash===true,invId:inv.id,unidoEl:firebase.firestore.FieldValue.serverTimestamp()});
   lote.set(db.collection('users').doc(u.uid).collection('accesos').doc(inv.ownerUid+'_'+inv.brandId),{ownerUid:inv.ownerUid,brandId:inv.brandId,name:inv.brandName||'Marca compartida'});
   // Se marca antes de guardar: la marca se abre en cuanto llegue, sin importar el orden de los datos.
   FX.pendingPick=inv.brandId;
@@ -134,6 +135,7 @@ brandM=function(ed){_brandM(ed);if(!ed||!S.b||!S.u)return;const md=document.quer
       <p class=fxnote>Tú eres la propietaria. Los editores crean y editan contenido; los lectores solo ven. Nadie puede cambiar la propiedad de la marca.</p>
       <div id=fx_miem></div><h4>Invitar a alguien</h4>
       <div class=r2><label>Correo<input id=fx_ie type=email autocomplete=off></label><label>Rol<select id=fx_ir><option value=editor>Editor</option><option value=viewer>Solo lectura</option></select></label></div>
+      <div class=row><label class=fxck><input type=checkbox id=fx_il> Puede ver leads y agendas</label><label class=fxck><input type=checkbox id=fx_ic> Puede ver dinero (ventas, cash, ingresos)</label></div>
       <div class=row><button class=gold onclick="fxInvite()">Crear invitación</button></div>
       <p class=fxnote>La app no envía correos. Copia el enlace y compártelo tú por WhatsApp o correo. El invitado debe verificar su correo para aceptar.</p>
       <div id=fx_invs></div></details>`);
@@ -149,19 +151,21 @@ function fxEquipoLoad(){FX.eqSubs.forEach(f=>f());FX.eqSubs=[];const me=S.u.uid,
 function fxRenderMiem(){const el=document.getElementById('fx_miem');if(!el)return;
   el.innerHTML=`<div class=fxmeta><b>Propietario:</b> tú (${esc(fxEmail())})</div>`+(FX.miem.length?FX.miem.map(m=>`<div class=fxpc>
     <div class=fxt2>${esc(m.email||'Sin correo')}</div><div class=fxmeta>${m.unidoEl?'Se unió el '+esc(fxFmtFecha(m.unidoEl)):''}</div>
-    <div class=row><select onchange="fxSetRol('${m.id}',this.value)"><option value=editor ${m.rol==='editor'?'selected':''}>Editor</option><option value=viewer ${m.rol==='viewer'?'selected':''}>Solo lectura</option></select><button class=danger onclick="fxQuitar('${m.id}')">Quitar acceso</button></div></div>`).join(''):'<p class=fxnote>Todavía no hay colaboradores.</p>')}
+    <div class=row><select onchange="fxSetRol('${m.id}',this.value)"><option value=editor ${m.rol==='editor'?'selected':''}>Editor</option><option value=viewer ${m.rol==='viewer'?'selected':''}>Solo lectura</option></select><button class=danger onclick="fxQuitar('${m.id}')">Quitar acceso</button></div>
+    <div class=row><label class=fxck><input type=checkbox ${m.verLeads?'checked':''} onchange="fxSetPerm('${m.id}','verLeads',this.checked)"> Ve leads y agendas</label><label class=fxck><input type=checkbox ${m.verCash?'checked':''} onchange="fxSetPerm('${m.id}','verCash',this.checked)"> Ve dinero</label></div></div>`).join(''):'<p class=fxnote>Todavía no hay colaboradores.</p>')}
+function fxSetPerm(uid,campo,val){fxRun(db.collection('users').doc(S.u.uid).collection('brands').doc(S.b.id).collection('miembros').doc(uid).update({[campo]:val}),'Permiso actualizado').catch(()=>{})}
 function fxRenderInvs(){const el=document.getElementById('fx_invs');if(!el)return;
   el.innerHTML='<h4>Invitaciones</h4>'+(FX.invs.length?FX.invs.slice().sort((a,b)=>fxFechaMs(b.creadoEl)-fxFechaMs(a.creadoEl)).map(i=>{
     const venc=i.status==='pendiente'&&fxFechaMs(i.expiresAt)<=Date.now();const est=venc?'vencida':i.status;
     const link=location.origin+location.pathname+'?inv='+i.id;
-    return `<div class=fxpc><div class=fxt2>${esc(i.recipientEmail)}</div><div class=fxmeta>${esc(FX_ROL_TXT[i.rol]||i.rol)} · ${esc(est)}${i.status==='pendiente'&&!venc?' · vence el '+esc(fxFmtFecha(i.expiresAt)):''}</div>
+    return `<div class=fxpc><div class=fxt2>${esc(i.recipientEmail)}</div><div class=fxmeta>${esc(FX_ROL_TXT[i.rol]||i.rol)}${i.verLeads?' · ve leads':''}${i.verCash?' · ve dinero':''} · ${esc(est)}${i.status==='pendiente'&&!venc?' · vence el '+esc(fxFmtFecha(i.expiresAt)):''}</div>
     <div class=row>${est==='pendiente'?`<button onclick="fxCopy('${link}','Enlace copiado')">Copiar enlace</button><button class=danger onclick="fxRevocar('${i.id}')">Revocar</button>`:''}</div></div>`}).join(''):'<p class=fxnote>No hay invitaciones.</p>')}
 async function fxInvite(){const em=($('#fx_ie').value||'').trim().toLowerCase(),rol=$('#fx_ir').value;
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em))return alert('Escribe un correo válido.');
   if(em===fxEmail())return alert('No puedes invitarte a ti misma o a ti mismo: ya eres propietario.');
   if(FX.invs.some(i=>i.recipientEmail===em&&i.status==='pendiente'&&i.brandId===S.b.id&&fxFechaMs(i.expiresAt)>Date.now()))return alert('Ya hay una invitación pendiente para ese correo.');
   const id=fxRandId();
-  try{await fxRun(db.collection('invitaciones').doc(id).set({ownerUid:S.u.uid,brandId:S.b.id,brandName:S.b.name||'Marca',recipientEmail:em,rol,status:'pendiente',invitedBy:S.u.uid,creadoEl:firebase.firestore.FieldValue.serverTimestamp(),expiresAt:new Date(Date.now()+14*864e5)}),'Invitación creada');
+  try{await fxRun(db.collection('invitaciones').doc(id).set({ownerUid:S.u.uid,brandId:S.b.id,brandName:S.b.name||'Marca',recipientEmail:em,rol,verLeads:!!($('#fx_il')&&$('#fx_il').checked),verCash:!!($('#fx_ic')&&$('#fx_ic').checked),status:'pendiente',invitedBy:S.u.uid,creadoEl:firebase.firestore.FieldValue.serverTimestamp(),expiresAt:new Date(Date.now()+14*864e5)}),'Invitación creada');
     $('#fx_ie').value='';fxCopy(location.origin+location.pathname+'?inv='+id,'Invitación creada. Enlace copiado')}catch(e){}}
 function fxSetRol(uid,rol){fxRun(db.collection('users').doc(S.u.uid).collection('brands').doc(S.b.id).collection('miembros').doc(uid).update({rol}),'Rol actualizado').catch(()=>{})}
 function fxQuitar(uid){if(!confirm('¿Quitar el acceso de esta persona? Ya no verá ni cambiará esta marca.'))return;
@@ -175,12 +179,14 @@ function fxLeave(){if(!S.b||!S.b.owner)return;if(!confirm('¿Salir de «'+(S.b.n
   fxRun(lote.commit(),'Saliste de la marca').then(()=>{closeM();FX.rolKey=null;FX.rol='owner';pick(null)}).catch(()=>{})}
 
 // ---- Reglas de interfaz según el rol ----
-const FX_OK=/^(Mes|Semana|Lista|Ideas|Guiones|Resumen|Reutilizar.*|No publicados.*|Hoy|‹|›|Tema|Salir|\+ Marca|Perfil|Cerrar|Cancelar|Vista general|Qué funciona|Objetivos|Informes|Tarjetas|Compacta|Ampliar|Abrir.*|Ver .*|Copiar.*|Imprimir.*|Exportar imagen.*|Exportar hallazgo|Descargar original|Compartir.*|WhatsApp|Telegram|Correo|▶ Teleprompter|Producción por etapas|← Volver.*|Actualizar vista previa|Limpiar selección|Salir de esta marca)$/;
-const FX_NO_EDITOR=/^(Eliminar semana|Guardar perfil|\+ Añadir meta|Quitar meta|Eliminar selección|Invitar.*|Crear invitación|Quitar acceso|Revocar)$/;
+const FX_OK=/^(Mes|Semana|Lista|Ideas|Guiones|Resumen|Reutilizar.*|No publicados.*|Hoy|‹|›|Tema|Salir|\+ Marca|Perfil|Cerrar|Cancelar|Vista general|Qué funciona|Objetivos|Informes|Tarjetas|Compacta|Ampliar|Abrir.*|Ver .*|Copiar.*|Imprimir.*|Exportar imagen.*|Exportar hallazgo|Descargar original|Compartir.*|WhatsApp|Telegram|Correo|▶ Teleprompter|Producción por etapas|← Volver.*|Actualizar vista previa|Limpiar selección|Salir de esta marca|CRM|Embudo|Por pieza|Leads|Agendas|Ventas)$/;
+const FX_NO_EDITOR=/^(Eliminar semana|Guardar perfil|\+ Añadir meta|Quitar meta|Eliminar selección|Invitar.*|Crear invitación|Quitar acceso|Revocar|Ajustes|Guardar ajustes)$/;
 let fxGateQ=false;
 function fxGate(){fxGateQ=false;const app=document.getElementById('app'),mod=document.getElementById('modal');if(!app)return;
   const ro=FX.rol==='viewer',ed=FX.rol==='editor';
   document.body.classList.toggle('fx-ro',ro);
+  // Sin permiso de dinero no se queda abierta la pestaña Objetivos.
+  if(!FX.perm.cash&&S.v==='resumen'&&FX.rs==='objetivos'){FX.rs='general';setTimeout(R,0);return}
   // Perfil de marca para no propietarios: solo lectura.
   const perfilLock=FX.rol!=='owner'&&S.b&&S.b.owner&&mod&&mod.querySelector('h2')&&mod.querySelector('h2').textContent==='Perfil de marca';
   [app,mod].forEach(root=>{if(!root)return;const enModal=root===mod;
@@ -188,6 +194,8 @@ function fxGate(){fxGateQ=false;const app=document.getElementById('app'),mod=doc
       let oculto=false;
       if(ro&&!FX_OK.test(t)&&!(b.className||'').includes('fxshow'))oculto=true;
       if(ed&&FX_NO_EDITOR.test(t))oculto=true;
+      if(!enModal&&t==='CRM'&&!FX.perm.leads)oculto=true;
+      if(!enModal&&t==='Objetivos'&&!FX.perm.cash)oculto=true;
       if(perfilLock&&enModal&&!/^(Cerrar|Cancelar|Salir de esta marca)$/.test(t))oculto=true;
       if(oculto){b.style.display='none';b.dataset.fxh='1'}
       else if(b.dataset.fxh){b.style.display='';delete b.dataset.fxh}});
