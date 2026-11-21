@@ -110,3 +110,95 @@ function fxFichaDescargar(){
   fxStatus('Ficha descargada: '+nombre);
 }
 function fxFichaCopiar(){fxCopy(fxFichaIA(),'Ficha copiada: pégala en Claude o GPT')}
+
+// ===== Guion y copy con Claude (sin API: se copia, se pega en tu chat y se regresa la respuesta) =====
+const FX_FMT_GUION={
+  reel:'Gancho en los primeros 3 segundos (una frase o pregunta con problema o promesa). Desarrollo en 2 o 3 puntos, uno por bloque de 5 a 10 segundos. Cierre con una sola acción. Indica qué se ve en pantalla en cada bloque y la duración aproximada (20 a 60 segundos).',
+  carrusel:'Slide 1 = gancho (problema o pregunta, texto corto). Slides centrales: una idea por slide, con ejemplo o paso. Último slide = CTA con la acción concreta. Si hay una estructura previa, mantén su cantidad de slides. Escribe el texto de cada slide y la imagen sugerida.',
+  historia:'Historia 1 = gancho visual o pregunta. Historias centrales = una idea por historia. Historia final = interacción (encuesta, pregunta o enlace). Incluye al menos una interacción. Cada historia debe entenderse sola. Entre 3 y 7 historias.'
+};
+const fxTagsDe=s=>String(s||'').match(/#[\p{L}\p{N}_]+/gu)||[];
+
+function fxPromptClaude(){
+  const g=k=>(($('#'+k)||{}).value||'').trim();
+  const f=E.format||'reel',b=S.b||{};
+  const L=[
+    'Eres estratega de contenido para Instagram. Prepara el contenido de UNA publicación.','',
+    'MARCA: '+(b.name||'')+(b.product?' · Producto: '+b.product:'')+(b.publico?' · Público: '+b.publico:'')+(b.voz?' · Voz: '+b.voz:''),
+    'Hashtag ancla de la marca (siempre el primero del copy): '+(b.hashtags||'no configurado'),'',
+    'PUBLICACIÓN',
+    '- Formato: '+((FMT[f]||{}).n||f),
+    '- Fecha: '+(g('f_date')||'sin fecha')+(g('f_hora')?' '+g('f_hora'):''),
+    '- Tema: '+(g('f_tema')||'—'),
+    '- Idea: '+(g('f_idea')||'—'),
+    '- Ángulo: '+(g('f_ang')||'—'),
+    '- Hook: '+(g('f_hook')||'—')+(g('f_tg')?' (tipo de gancho: '+g('f_tg')+')':''),
+    '- CTA: '+(g('f_cta')||'—'),
+    '- Palabra clave: '+(g('f_key')||'ninguna'),
+    '- Enfoque: '+((ENF[E.enfoque]||{}).n||'—')+' · Etapa del embudo: '+((EMB[E.embudo]||{}).n||'—')+' · Pilar: '+(g('f_pilar')||'—')+' · Categoría: '+(g('f_cat')||'—'),
+    '- Referencia: '+(g('f_ref')||'—'),
+    '- Objetivo: '+(g('f_obj')||'—')
+  ];
+  if(g('f_gu'))L.push('- Guion o estructura ya escrito (mejóralo): '+g('f_gu'));
+  L.push('','REGLAS DEL GUION',FX_FMT_GUION[f]||FX_FMT_GUION.reel,'');
+  L.push('REGLAS DEL COPY');
+  if(f==='historia'){L.push('Las historias NO llevan copy. Escribe "No aplica" en las secciones COPY y HASHTAGS.')}
+  else{L.push(
+    '1. Primera línea: SOLO la palabra clave en MAYÚSCULAS (si la hay, sin verbos). Si no hay palabra clave, la primera línea es el gancho.',
+    '2. Después, un copy breve con tono amigable, como un mensaje escrito a una persona. Usa palabras del tema para que Instagram (SEO) posicione la publicación.',
+    '3. Repite la palabra clave en una línea aparte.',
+    '4. Exactamente 5 hashtags: el primero es "'+(b.hashtags||'el hashtag ancla')+'"; los otros 4 propónlos según el tema. Sin repetir ninguno.');
+    L.push('Si la publicación pide comentar una palabra clave, la línea de acción debe decir: Comenta PALABRA y la acción.')}
+  L.push('','FORMATO DE RESPUESTA (usa exactamente estos encabezados):','=== GUION ===','(el guion o la estructura)','=== COPY ===','(el copy; si es historia: No aplica)','=== HASHTAGS ===','(los 5 hashtags; si es historia: No aplica)');
+  return L.join('\n')}
+function fxPrepararIA(){fxCopy(fxPromptClaude(),'Texto copiado: pégalo en tu chat de Claude')}
+
+function fxParseIA(t){
+  const sec=k=>{const m=String(t||'').match(new RegExp('===\\s*'+k+'\\s*===([\\s\\S]*?)(?=\\n===\\s*[A-ZÁÉÍÓÚ]+\\s*===|$)','i'));return m?m[1].trim():''};
+  return {guion:sec('GUION'),copy:sec('COPY'),hashtags:sec('HASHTAGS')}}
+
+function fxRevisarIA(){
+  const p=fxParseIA(($('#fx_ia').value||''));const out=$('#fx_ia_res');const f=E.format||'reel';const w=[],ok=[];
+  if(!p.guion)w.push('No encontré la sección === GUION ===.');
+  if(f!=='historia'){
+    const kw=($('#f_key').value||'').trim();
+    if(!p.copy)w.push('No encontré la sección === COPY ===.');
+    const tags=fxTagsDe(p.hashtags&&p.hashtags!=='No aplica'?p.hashtags:p.copy);
+    if(tags.length!==5)w.push('Hashtags: '+tags.length+'. Deben ser exactamente 5.');else ok.push('5 hashtags');
+    if(new Set(tags.map(x=>x.toLowerCase())).size!==tags.length)w.push('Hay hashtags repetidos.');
+    const anc=fxTagsDe((S.b&&S.b.hashtags)||'')[0];
+    if(anc&&tags[0]&&tags[0].toLowerCase()!==anc.toLowerCase())w.push('El primer hashtag debe ser el ancla de la marca: '+anc+'.');
+    else if(anc&&tags[0])ok.push('ancla primero');
+    const lineas=p.copy.split('\n').map(x=>x.trim()).filter(Boolean);
+    if(kw){
+      if(lineas[0]!==kw.toUpperCase())w.push('La primera línea debe ser solo la palabra clave: '+kw.toUpperCase()+'.');else ok.push('palabra clave primero');
+      if(lineas.filter(l=>l.toUpperCase()===kw.toUpperCase()).length<2)w.push('Repite la palabra clave en una línea aparte antes de los hashtags.');else ok.push('palabra clave repetida');
+    }
+  }
+  out.innerHTML=(ok.length?'<p class=fxnote style="color:#4ade80">✓ '+esc(ok.join(' · '))+'</p>':'')+
+    (w.length?'<ul style="color:#f87171">'+w.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>':'<p class=fxnote>Todo correcto.</p>');
+  return p}
+
+function fxUsarIA(){
+  const p=fxRevisarIA();
+  if(!p.guion&&!p.copy)return alert('Pega primero la respuesta de Claude.');
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v};
+  const f=E.format||'reel';
+  set('f_gu',p.guion);
+  if(f!=='historia'){set('f_desc',p.copy);set('f_tags',fxTagsDe(p.hashtags&&p.hashtags!=='No aplica'?p.hashtags:'').join(' '))}
+  const d=document.getElementById('f_gu');if(d&&d.closest('details'))d.closest('details').open=true;
+  fxStatus('Listo: revisa el texto y pulsa Guardar en la pieza','warn')}
+
+const _editIA=edit;
+edit=function(id,date){_editIA(id,date);
+  if(FX.rol==='viewer')return;
+  const md=document.querySelector('#modal .md');if(!md||md.querySelector('.fx-ia'))return;
+  const row=[...md.querySelectorAll('.row')].find(r=>r.querySelector('.gold'));if(!row)return;
+  const box=document.createElement('details');box.className='fxsec fx-ia';
+  box.innerHTML='<summary>Guion y copy con Claude</summary>'+
+    '<p class=fxnote>1) Pulsa «Preparar para Claude»: se copia el texto completo. 2) Pégalo en tu chat de Claude. 3) Copia la respuesta de Claude y pégala abajo.</p>'+
+    '<div class=row><button type=button onclick="fxPrepararIA()">Preparar para Claude</button></div>'+
+    '<textarea id=fx_ia style="min-height:140px" placeholder="Pega aquí la respuesta de Claude"></textarea>'+
+    '<div class=row><button type=button onclick="fxRevisarIA()">Revisar</button><button type=button class=gold onclick="fxUsarIA()">Usar en esta pieza</button></div>'+
+    '<div id=fx_ia_res></div>';
+  row.parentNode.insertBefore(box,row)};
