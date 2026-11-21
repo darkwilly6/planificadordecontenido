@@ -12,12 +12,19 @@ FX.ig={doc:null,estado:null,hist:[],dias:30,cargadoKey:null};
 
 const igEsDueno=()=>!!(S.u&&S.b&&!S.b.owner);
 const igRef=()=>db.collection('users').doc(S.u.uid).collection('instagram').doc(S.b.id);
+// Prueba primero graph.instagram.com y, si el token no es de ahí, graph.facebook.com (tokens de usuario del sistema).
 async function igGet(ruta,params,token){
-  const url=/^https?:/.test(ruta)?ruta:IG_API+'/'+ruta+'?'+new URLSearchParams({...params,access_token:token});
-  let r;try{r=await fetch(url)}catch(e){const x=new Error('Sin conexión con Instagram');x.code='red';throw x}
-  const j=await r.json().catch(()=>({}));
-  if(j.error){const x=new Error(j.error.message||'Error de Instagram');x.code=j.error.code;throw x}
-  return j}
+  const hosts=[IG_API,'https://graph.facebook.com/v27.0'];
+  let ultimo=null;
+  for(const h of hosts){
+    const url=/^https?:/.test(ruta)?ruta:h+'/'+ruta+'?'+new URLSearchParams({...params,access_token:token});
+    let r;try{r=await fetch(url)}catch(e){const x=new Error('Sin conexión con Instagram');x.code='red';throw x}
+    const j=await r.json().catch(()=>({}));
+    if(!j.error)return j;
+    ultimo=j.error;
+    if(j.error.code!==190&&j.error.code!==100)break;
+  }
+  const x=new Error(ultimo.message||'Error de Instagram');x.code=ultimo.code;throw x}
 // Pide métricas; si alguna no existe para ese tipo de publicación, prueba con un grupo más pequeño.
 async function igInsights(id,token,grupos){
   for(const g of grupos){try{const r=await igGet(id+'/insights',{metric:g.join(',')},token);const o={};

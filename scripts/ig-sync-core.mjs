@@ -17,12 +17,19 @@ export const fechaLocal = ms => { const d = new Date(ms); return { date: d.getFu
 export const shortcode = u => (String(u || '').match(/instagram\.com\/(?:[\w.]+\/)?(?:reel|reels|p|tv)\/([\w-]+)/) || [])[1] || '';
 const corto = s => String(s || '').slice(0, 4) + '…';
 
+// Prueba graph.instagram.com y, si el token no es de ahí, graph.facebook.com (tokens de usuario del sistema).
 async function igGet(fetch, ruta, params, token) {
-  const url = IG_API + '/' + ruta + '?' + new URLSearchParams({ ...params, access_token: token });
-  const r = await fetch(url);
-  const j = await r.json().catch(() => ({}));
-  if (j.error) { const e = new Error(j.error.message || 'Error de Instagram'); e.code = j.error.code; throw e; }
-  return j;
+  const hosts = [IG_API, 'https://graph.facebook.com/v27.0'];
+  let ultimo = null;
+  for (const h of hosts) {
+    const url = h + '/' + ruta + '?' + new URLSearchParams({ ...params, access_token: token });
+    const r = await fetch(url);
+    const j = await r.json().catch(() => ({}));
+    if (!j.error) return j;
+    ultimo = j.error;
+    if (j.error.code !== 190 && j.error.code !== 100) break;
+  }
+  const e = new Error(ultimo.message || 'Error de Instagram'); e.code = ultimo.code; throw e;
 }
 async function insights(fetch, id, token, grupos) {
   for (const g of grupos) {
