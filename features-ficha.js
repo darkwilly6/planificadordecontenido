@@ -112,10 +112,11 @@ function fxFichaDescargar(){
 function fxFichaCopiar(){fxCopy(fxFichaIA(),'Ficha copiada: pégala en Claude o GPT')}
 
 // ===== Guion y copy con Claude (sin API: se copia, se pega en tu chat y se regresa la respuesta) =====
+const FX_PERSONA='Eres una estratega de contenido para Instagram profesional, con 5 años de experiencia, que trabaja con marcas de cualquier rubro.';
 const FX_FMT_GUION={
-  reel:'Gancho en los primeros 3 segundos (una frase o pregunta con problema o promesa). Desarrollo en 2 o 3 puntos, uno por bloque de 5 a 10 segundos. Cierre con una sola acción. Indica qué se ve en pantalla en cada bloque y la duración aproximada (20 a 60 segundos).',
-  carrusel:'Slide 1 = gancho (problema o pregunta, texto corto). Slides centrales: una idea por slide, con ejemplo o paso. Último slide = CTA con la acción concreta. Si hay una estructura previa, mantén su cantidad de slides. Escribe el texto de cada slide y la imagen sugerida.',
-  historia:'Historia 1 = gancho visual o pregunta. Historias centrales = una idea por historia. Historia final = interacción (encuesta, pregunta o enlace). Incluye al menos una interacción. Cada historia debe entenderse sola. Entre 3 y 7 historias.'
+  reel:'Duración: entre 60 y 70 segundos. Empieza con un gancho: un problema o una pregunta, en frase corta. Usa pocas palabras, palabras concretas y nada técnico. Háblale directo a la persona, para que se identifique y entienda que el mensaje es para ella. Cierra con una sola acción. Entrega el guion en bloques con el texto a decir.',
+  carrusel:'Entre 5 y 7 slides. Usa 5 o 6 para explicar un concepto, un problema o cómo resolverlo. Usa 7 como máximo solo si es un paso a paso. Slide 1 = gancho: un problema o una pregunta, en texto corto. Cada slide central = una idea, con un ejemplo o un paso. Último slide = CTA con una acción concreta. Entrega solo el texto de cada slide. No sugieras imágenes.',
+  historia:'Entre 3 y 7 historias. Historia 1 = gancho. Cada historia debe entenderse sola. La última invita a interactuar (encuesta, pregunta o enlace). Incluye al menos una interacción. Entrega solo el texto de cada historia.'
 };
 const fxTagsDe=s=>String(s||'').match(/#[\p{L}\p{N}_]+/gu)||[];
 
@@ -123,7 +124,7 @@ function fxPromptClaude(){
   const g=k=>(($('#'+k)||{}).value||'').trim();
   const f=E.format||'reel',b=S.b||{};
   const L=[
-    'Eres estratega de contenido para Instagram. Prepara el contenido de UNA publicación.','',
+    FX_PERSONA+' Prepara el contenido de UNA publicación.','',
     'MARCA: '+(b.name||'')+(b.product?' · Producto: '+b.product:'')+(b.publico?' · Público: '+b.publico:'')+(b.voz?' · Voz: '+b.voz:''),
     'Hashtag ancla de la marca (siempre el primero del copy): '+(b.hashtags||'no configurado'),'',
     'PUBLICACIÓN',
@@ -144,11 +145,10 @@ function fxPromptClaude(){
   L.push('REGLAS DEL COPY');
   if(f==='historia'){L.push('Las historias NO llevan copy. Escribe "No aplica" en las secciones COPY y HASHTAGS.')}
   else{L.push(
-    '1. Primera línea: SOLO la palabra clave en MAYÚSCULAS (si la hay, sin verbos). Si no hay palabra clave, la primera línea es el gancho.',
-    '2. Después, un copy breve con tono amigable, como un mensaje escrito a una persona. Usa palabras del tema para que Instagram (SEO) posicione la publicación.',
-    '3. Repite la palabra clave en una línea aparte.',
-    '4. Exactamente 5 hashtags: el primero es "'+(b.hashtags||'el hashtag ancla')+'"; los otros 4 propónlos según el tema. Sin repetir ninguno.');
-    L.push('Si la publicación pide comentar una palabra clave, la línea de acción debe decir: Comenta PALABRA y la acción.')}
+    '1. Primera línea: la acción con la palabra clave en MAYÚSCULAS. Ejemplo: "Comenta TRADING si quieres que te pase la guía para poder retirar". Si la publicación no tiene palabra clave, esta línea se omite y la primera línea es el gancho.',
+    '2. Después, una descripción breve, amigable, como un mensaje escrito a una persona. Usa palabras del tema para que Instagram (SEO) posicione la publicación.',
+    '3. Repite EXACTAMENTE la primera línea en una línea aparte.',
+    '4. Exactamente 5 hashtags: el primero es "'+(b.hashtags||'el hashtag ancla')+'"; los otros 4 propónlos según el tema. Sin repetir ninguno.');}
   L.push('','FORMATO DE RESPUESTA (usa exactamente estos encabezados):','=== GUION ===','(el guion o la estructura)','=== COPY ===','(el copy; si es historia: No aplica)','=== HASHTAGS ===','(los 5 hashtags; si es historia: No aplica)');
   return L.join('\n')}
 function fxPrepararIA(){fxCopy(fxPromptClaude(),'Texto copiado: pégalo en tu chat de Claude')}
@@ -171,8 +171,9 @@ function fxRevisarIA(){
     else if(anc&&tags[0])ok.push('ancla primero');
     const lineas=p.copy.split('\n').map(x=>x.trim()).filter(Boolean);
     if(kw){
-      if(lineas[0]!==kw.toUpperCase())w.push('La primera línea debe ser solo la palabra clave: '+kw.toUpperCase()+'.');else ok.push('palabra clave primero');
-      if(lineas.filter(l=>l.toUpperCase()===kw.toUpperCase()).length<2)w.push('Repite la palabra clave en una línea aparte antes de los hashtags.');else ok.push('palabra clave repetida');
+      const kwU=kw.toUpperCase();
+      if(!lineas[0]||!lineas[0].includes(kwU))w.push('La primera línea debe incluir la palabra clave en MAYÚSCULAS ('+kwU+'), por ejemplo: Comenta '+kwU+' si quieres…');else ok.push('palabra clave primero');
+      if(lineas[0]&&lineas.filter(l=>l===lineas[0]).length<2)w.push('Repite EXACTAMENTE la primera línea en una línea aparte, antes de los hashtags.');else ok.push('primera línea repetida');
     }
   }
   out.innerHTML=(ok.length?'<p class=fxnote style="color:#4ade80">✓ '+esc(ok.join(' · '))+'</p>':'')+
