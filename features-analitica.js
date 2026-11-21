@@ -124,6 +124,7 @@ function qfV(){const f=FX.qf,L=qfBase(),r=f.red,rg=qfRango();
     <label>Ordenar hooks por<select onchange="FX.qf.met=this.value;R()">${Object.entries(QF_MET).map(([k,v])=>`<option value=${k} ${f.met===k?'selected':''}>${v}</option>`).join('')}</select></label>
   </div>
   <p class=fxnote>Período: ${fd(rg.a)} – ${fd(rg.b)} · ${L.length} publicación(es) publicadas con esos filtros.</p>
+  ${FX.rol==='viewer'?'':`<div class=row><button class=gold onclick="fxFichaDescargar()">Descargar ficha para IA (.md)</button><button onclick="fxFichaCopiar()">Copiar ficha para IA</button></div><p class=fxnote>La ficha usa el período y los filtros de arriba. Sirve para Claude, GPT u otra IA: adjúntala o pégala y pide el análisis.</p>`}
   ${tarjetas}
   <h3 class=fxh>Hallazgos y oportunidades</h3>
   <p class=fxnote>Umbrales: mínimo ${QF_MIN} piezas por segmento; oportunidad con +20 % o más frente al resto. Muestra y evidencia en cada tarjeta.</p>
