@@ -110,7 +110,7 @@ function fxFill(t){if(t.formato)setE('format',t.formato);
   if(t.tipo)setE('tipo',t.tipo);if(t.enfoque)setE('enfoque',t.enfoque);if(t.embudo)setE('embudo',t.embudo);
   const set=(id,v)=>{const el=document.getElementById(id);if(el&&v)el.value=v};
   set('f_pilar',t.pilar);set('f_cat',t.categoria);set('f_obj',t.objetivo);set('f_ang',t.angulo);set('f_tg',t.tipogancho);
-  set('f_hook',t.hook);set('f_cta',t.cta);set('f_key',t.keyword);set('f_libre',t.libre);set('f_tags',t.tags);set('f_gu',t.guion);
+  set('f_tema',t.tema);set('f_hook',t.hook);set('f_cta',t.cta);set('f_key',t.keyword);set('f_libre',t.libre);set('f_tags',t.tags);set('f_gu',t.guion);
   if(t.guion){const d=document.getElementById('f_gu');d&&d.closest('details')&&(d.closest('details').open=true)}}
 
 // Lee la pieza abierta en el editor para guardarla como plantilla (sin métricas ni enlaces).

@@ -158,10 +158,40 @@ function igV(){if(FX.ig.cargadoKey!==(S.u&&S.b?S.u.uid+'|'+S.b.id:'')){igCargar(
     <div class=fxmeta>Capturada ${h.actualizadoMs?fd(new Date(h.actualizadoMs)):''} ${h.fuente==='github'?'(tarea automática)':''}</div>
     <div class=row><select onchange="igAsignarHistoria('${h.id}',this.value)"><option value="">Sin asignar a una pieza</option>${cand.map(p=>`<option value="${p.id}" ${h.piezaId===p.id?'selected':''}>${fd(p.date)} · ${esc((p.tema||'Sin tema').slice(0,40))}</option>`).join('')}</select>${h.permalink?`<button onclick="window.open('${esc(h.permalink)}','_blank','noopener')">Abrir en Instagram</button>`:''}</div></div>`}).join('')
     :'<p class=empty>Aún no hay historias capturadas. Instagram solo entrega sus métricas mientras están activas (24 h).</p>';
-  return `<div class=fxwrap>${con}
+  const seqs=igSecuencias();
+  const rank=seqs.length?`<h3 class=fxh>Secuencias por día</h3><div class=fxtable><table><tr><th>Día</th><th>Historias</th><th>Vistas</th><th>Respuestas</th><th>Compartidos</th><th>Tasa de respuesta</th><th>Pieza</th><th></th></tr>${seqs.map(s=>`<tr><td>${esc(fd(s.fecha))}</td><td>${s.n}</td><td>${numTxt(s.vistas)}</td><td><b>${numTxt(s.respuestas)}</b></td><td>${numTxt(s.compartidos)}</td><td>${s.tasa!=null?pctTxt(s.tasa):'—'}</td><td>${s.piezaId?esc((S.P.find(p=>p.id===s.piezaId)||{}).tema||'Vinculada'):`<select id="sq_${s.id}"><option value="">Elige pieza</option>${piezasH.map(p=>`<option value="${p.id}">${fd(p.date)} · ${esc((p.tema||'Sin tema').slice(0,30))}</option>`).join('')}</select> <button onclick="igVincular('${s.id}',document.getElementById('sq_${s.id}').value)">Vincular</button>`}</td><td><button onclick="igReplicar('${s.id}')">Replicar</button></td></tr>`).join('')}</table></div><p class=fxnote>Ordenado por respuestas. Instagram no entrega «me gusta» en historias: las respuestas y la navegación son la mejor señal.</p>`:'';
+  return `<div class=fxwrap>${con}${rank}
     <h3 class=fxh>Historias capturadas</h3>
     <p class=fxnote>Una pieza «Historia» puede ser una secuencia: asigna cada historia a su pieza. Vistas = la mayor de la secuencia; respuestas y compartidos se suman.</p>
     ${lista}</div>`}
+
+// ---- Secuencias de historias: agrupadas por día (hora de El Salvador: la app y la tarea usan esa zona) ----
+function igSecuencias(){const G={};FX.ig.hist.forEach(h=>{(G[h.fecha]=G[h.fecha]||[]).push(h)});
+  return Object.entries(G).map(([fecha,L])=>{L.sort((a,b)=>(a.hora||'').localeCompare(b.hora||''));
+    const suma=k=>L.reduce((s,x)=>s+(+(x.metricas||{})[k]||0),0);
+    const vistas=Math.max(0,...L.map(x=>+(x.metricas||{}).views||+(x.metricas||{}).reach||0));
+    const respuestas=suma('replies'),compartidos=suma('shares'),navegacion=suma('navigation');
+    const pieza=L.find(x=>x.piezaId);
+    return {id:fecha,fecha,historias:L,n:L.length,vistas,respuestas,compartidos,navegacion,tasa:vistas?respuestas/vistas*100:null,piezaId:pieza?pieza.piezaId:''}
+  }).sort((a,b)=>b.respuestas-a.respuestas||b.vistas-a.vistas)}
+
+// Vincula todas las historias del día a una pieza «Historia» y guarda sus métricas en la pieza.
+async function igVincular(fecha,pid){const seq=igSecuencias().find(s=>s.id===fecha);if(!seq)return;
+  if(!pid)return alert('Elige la pieza de tipo Historia a la que pertenece esta secuencia.');
+  const suma=k=>seq.historias.reduce((s,x)=>s+(+(x.metricas||{})[k]||0),0);
+  try{const lote=db.batch();
+    seq.historias.forEach(h=>lote.update(cref('ig_historias').doc(h.id),{piezaId:pid}));
+    lote.update(cref('pieces').doc(pid),{'m.ig.views':seq.vistas,'m.ig.likes':0,'m.ig.comments':suma('replies'),'m.ig.saves':0,'m.ig.shares':suma('shares'),estado:'Publicado',secuenciaHistorias:seq.n});
+    await fxRun(lote.commit(),'Secuencia vinculada a la pieza');
+    FX.ig.hist.forEach(h=>{if(seq.historias.some(x=>x.id===h.id))h.piezaId=pid});R()}
+  catch(e){fxStatus('No se pudo vincular: '+e.message,'err')}}
+
+// Abre una pieza nueva con la misma estructura de la secuencia, lista para repetirla con otro contenido.
+function igReplicar(fecha){const seq=igSecuencias().find(s=>s.id===fecha);if(!seq)return;
+  const pasos=seq.historias.map((h,i)=>`Historia ${i+1} (${h.tipo==='VIDEO'?'video':'imagen'}): [qué mostrar]`+(h.metricas&&h.metricas.replies?'  · antes tuvo '+h.metricas.replies+' respuestas':'')).join('\n');
+  const t=new Date();t.setDate(t.getDate()+1);
+  FX.pre={formato:'historia',tema:'Repetir secuencia del '+fd(fecha),guion:pasos+'\nInteracción/CTA: [pregunta o encuesta]'};
+  closeM();edit(null,ds(t))}
 
 // Al abrir una marca propia se carga la conexión (y se renueva el token si toca).
 const _pickIG=pick;
