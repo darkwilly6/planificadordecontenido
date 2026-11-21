@@ -126,11 +126,23 @@ function igV(){if(FX.ig.cargadoKey!==(S.u&&S.b?S.u.uid+'|'+S.b.id:'')){igCargar(
   const vence=d&&d.expiraMs?Math.ceil((d.expiraMs-ahora)/IG_DIA):null;
   let con='';
   if(dueno&&!d)con=`<details class=fxsec open><summary>Conectar Instagram a «${esc(S.b.name)}»</summary>
-    <ol class=fxnote style="padding-left:18px"><li>En developers.facebook.com abre tu app → Instagram → «Configuración de la API con inicio de sesión de Instagram».</li>
-    <li>En «Roles de la app → Probadores de Instagram» agrega esta cuenta y acepta la invitación en Instagram (Configuración → Apps y sitios web).</li>
-    <li>En «Generar tokens de acceso» entra con esta cuenta y copia el token.</li><li>Pégalo aquí. Se guarda solo en tu cuenta: tus colaboradores no lo ven.</li></ol>
+    <details class=fxsec><summary>Guía paso a paso (primera vez)</summary>
+    <ol class=fxnote style="padding-left:18px;line-height:1.6">
+      <li><b>Cuenta profesional.</b> Tu cuenta de Instagram debe ser de Empresa o Creador (Configuración → Cuenta → Cambiar a cuenta profesional). Si es personal, Meta no genera el token.</li>
+      <li><b>Portfolio comercial.</b> Crea uno gratis en business.facebook.com → «Crear cuenta», o usa el que ya tengas. Agrega ahí tus cuentas de Instagram (Configuración → Cuentas → Cuentas de Instagram → Agregar).</li>
+      <li><b>App de Meta.</b> Entra a developers.facebook.com → Mis apps → Crear app. En «Casos de uso» elige «Administrar mensajes y contenido en Instagram». Si pide un portfolio, selecciona el del paso 2.</li>
+      <li><b>Configuración con inicio de sesión unificado.</b> En tu app, en el menú de la izquierda: Casos de uso → Personalizar → <b>«API setup with Unified login»</b>. (No uses «Configuración de la API con inicio de sesión con Facebook»: esa es la antigua.)</li>
+      <li><b>Permisos.</b> En «Crear nueva configuración» asegúrate de tener <b>instagram_basic</b> y <b>instagram_manage_insights</b>. Sin el segundo no hay estadísticas.</li>
+      <li><b>Roles.</b> En el menú de la izquierda: Roles de la app → Roles → Agregar personas → <b>Evaluador de Instagram</b>. Escribe el usuario de cada cuenta.</li>
+      <li><b>Acepta la invitación desde cada cuenta.</b> En Instagram (navegador o app): Configuración → Apps y sitios web → Invitaciones de prueba → Aceptar. Sin este paso, Meta no entrega el token.</li>
+      <li><b>Genera el token.</b> En «2. Generar tokens de acceso» pulsa «Agregar cuenta de Instagram», elige la cuenta y copia el token. El token de usuario del sistema no caduca.</li>
+      <li><b>ID de la cuenta.</b> En el mismo paso 2 aparece el ID numérico de cada cuenta. Cópialo en el campo «ID de la cuenta».</li>
+      <li><b>Conecta aquí.</b> Pega el token y el ID, y pulsa Conectar Instagram. El token se guarda solo en tu cuenta; tus colaboradores no lo ven.</li>
+    </ol>
+    <p class=fxnote><b>Si sale un error:</b> «token vencido o no válido» → genera un token nuevo en el paso 8. «cannot_access_user_username_field» o similar → actualiza la página con Ctrl+F5. Cualquier otro mensaje, cópialo y pídele ayuda a quien mantiene la app.</p>
+    </details>
     <label>Token de acceso<input id=ig_tok type=password autocomplete=off placeholder="Pega aquí el token"></label>
-    <label>ID de la cuenta de Instagram (si Meta lo muestra en el paso 2)<input id=ig_id placeholder="Ej: 17841400000000000"></label>
+    <label>ID de la cuenta de Instagram (paso 9 de la guía)<input id=ig_id placeholder="Ej: 17841400000000000"></label>
     <div class=row><button class=gold onclick="igConectar()">Conectar Instagram</button></div></details>`;
   else if(dueno&&d)con=`<div class=fxcards><div class=fxcard2><small>Cuenta conectada</small><b>@${esc(d.username||'')}</b><span>${esc(d.tipo||'')}</span></div>
     <div class=fxcard2><small>Token</small><b>${vence==null?'—':vence<=0?'Vencido':vence+' días'}</b><span>${vence!=null&&vence<=0?'Genera uno nuevo y vuelve a conectar':'Se renueva solo al abrir la app o con la tarea de GitHub'}</span></div>
