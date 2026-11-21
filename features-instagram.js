@@ -52,8 +52,8 @@ async function igCargar(forzar){if(!S.u||!S.b)return;const key=S.u.uid+'|'+S.b.i
 async function igCargarHist(){try{const s=await cref('ig_historias').get();
   FX.ig.hist=fxDocs(s).sort((a,b)=>(b.fecha+(b.hora||'')).localeCompare(a.fecha+(a.hora||''))).slice(0,80)}catch(e){FX.ig.hist=[]}}
 
-async function igMe(t,id){const nodo=id||'me';try{return await igGet(nodo,{fields:'user_id,username,account_type'},t)}
-  catch(e){if(e.code===190||e.code==='red')throw e;return igGet(nodo,{fields:'id,username'},t)}}
+async function igMe(t,id){const nodo=id||'me';try{return await igGet(nodo,{fields:'id,account_type'},t)}
+  catch(e){if(e.code===190||e.code==='red')throw e;return igGet(nodo,{fields:'id'},t)}}
 async function igConectar(){const t=($('#ig_tok').value||'').trim();const idManual=($('#ig_id').value||'').trim();
   if(t.length<20)return alert('Pega el token completo que generaste en Meta.');
   fxStatus('Comprobando el token…','warn');
