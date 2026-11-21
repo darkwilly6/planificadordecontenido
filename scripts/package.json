@@ -1,0 +1,9 @@
+{
+  "name": "ig-sync",
+  "private": true,
+  "type": "module",
+  "description": "Sincronización cada hora de Instagram con el Calendario de Contenido (GitHub Actions).",
+  "dependencies": {
+    "firebase-admin": "12.7.0"
+  }
+}

@@ -267,7 +267,7 @@ function objDel(col,id){if(!confirm('¿Eliminar este registro? No se puede desha
 
 // ---- Resumen con subpestañas: Vista general · Qué funciona · Objetivos · Informes ----
 const _resumenV=resumenV;
-resumenV=function(){const tabs=[['general','Vista general'],['funciona','Qué funciona'],['objetivos','Objetivos'],['informes','Informes']];
+resumenV=function(){const tabs=[['general','Vista general'],['funciona','Qué funciona'],['objetivos','Objetivos'],['informes','Informes'],['instagram','Instagram']];
   const bar=`<div class=fxbar>${tabs.map(([k,n])=>`<button class="${FX.rs===k?'on':''}" onclick="FX.rs='${k}';R()">${n}</button>`).join('')}</div>`;
-  const cuerpo=FX.rs==='funciona'?qfV():FX.rs==='objetivos'?objV():FX.rs==='informes'?infV():_resumenV();
+  const cuerpo=FX.rs==='instagram'?igV():FX.rs==='funciona'?qfV():FX.rs==='objetivos'?objV():FX.rs==='informes'?infV():_resumenV();
   return bar+cuerpo};

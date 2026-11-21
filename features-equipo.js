@@ -179,7 +179,7 @@ function fxLeave(){if(!S.b||!S.b.owner)return;if(!confirm('¿Salir de «'+(S.b.n
   fxRun(lote.commit(),'Saliste de la marca').then(()=>{closeM();FX.rolKey=null;FX.rol='owner';pick(null)}).catch(()=>{})}
 
 // ---- Reglas de interfaz según el rol ----
-const FX_OK=/^(Mes|Semana|Lista|Ideas|Guiones|Resumen|Reutilizar.*|No publicados.*|Hoy|‹|›|Tema|Salir|\+ Marca|Perfil|Cerrar|Cancelar|Vista general|Qué funciona|Objetivos|Informes|Tarjetas|Compacta|Ampliar|Abrir.*|Ver .*|Copiar.*|Imprimir.*|Exportar imagen.*|Exportar hallazgo|Descargar original|Compartir.*|WhatsApp|Telegram|Correo|▶ Teleprompter|Producción por etapas|← Volver.*|Actualizar vista previa|Limpiar selección|Salir de esta marca|CRM|Embudo|Por pieza|Leads|Agendas|Ventas)$/;
+const FX_OK=/^(Mes|Semana|Lista|Ideas|Guiones|Resumen|Reutilizar.*|No publicados.*|Hoy|‹|›|Tema|Salir|\+ Marca|Perfil|Cerrar|Cancelar|Vista general|Qué funciona|Objetivos|Informes|Tarjetas|Compacta|Ampliar|Abrir.*|Ver .*|Copiar.*|Imprimir.*|Exportar imagen.*|Exportar hallazgo|Descargar original|Compartir.*|WhatsApp|Telegram|Correo|▶ Teleprompter|Producción por etapas|← Volver.*|Actualizar vista previa|Limpiar selección|Salir de esta marca|CRM|Embudo|Por pieza|Leads|Agendas|Ventas|Instagram|Abrir en Instagram)$/;
 const FX_NO_EDITOR=/^(Eliminar semana|Guardar perfil|\+ Añadir meta|Quitar meta|Eliminar selección|Invitar.*|Crear invitación|Quitar acceso|Revocar|Ajustes|Guardar ajustes)$/;
 let fxGateQ=false;
 function fxGate(){fxGateQ=false;const app=document.getElementById('app'),mod=document.getElementById('modal');if(!app)return;
