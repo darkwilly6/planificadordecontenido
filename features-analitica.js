@@ -35,7 +35,7 @@ function qfStats(list,r){const D=list.map(p=>({p,m:qfM(p,r)})).filter(x=>x.m.tie
 const QF_DIM={
   formato:{n:'Formato',v:p=>p.format||'',l:v=>(FMT[v]||{}).n||'Sin formato',o:Object.keys(FMT),acc:(k)=>`Crea 2 ${(FMT[k]||{n:'publicaciones'}).n}s sobre temas que ya funcionaron y compara sus resultados en 30 días.`},
   tipo:{n:'Tipo',v:p=>p.tipo||'',l:v=>(TIPO[v]||{}).n||'Sin tipo',o:Object.keys(TIPO),acc:(k)=>`Planifica 2 contenidos de tipo ${(TIPO[k]||{n:''}).n} y compara sus resultados después de 30 días.`},
-  enfoque:{n:'Enfoque',v:p=>p.enfoque||'',l:v=>(ENF[v]||{}).n||'Sin enfoque',o:Object.keys(ENF),acc:(k)=>`Planifica 2 contenidos con enfoque ${(ENF[k]||{n:''}).n} y compara sus resultados después de 30 días.`},
+  enfoque:{n:'Enfoque',v:p=>p.enfoque||'',l:v=>(ENF[v]||{}).n||'Sin enfoque',o:null,acc:(k)=>`Planifica 2 contenidos con enfoque ${(ENF[k]||{n:''}).n} y compara sus resultados después de 30 días.`},
   embudo:{n:'Etapa del embudo',v:p=>p.embudo||'',l:v=>(EMB[v]||{}).n||'Sin etapa',o:Object.keys(EMB),acc:(k)=>`Planifica 2 contenidos ${(EMB[k]||{n:''}).n} y compara sus resultados después de 30 días.`},
   pilar:{n:'Pilar',v:p=>p.pilar||'',l:v=>v||'Sin pilar',o:null,acc:(k)=>`Planifica 2 contenidos del pilar «${k}» y compara sus resultados.`},
   categoria:{n:'Categoría estratégica',v:p=>p.categoria||'',l:v=>v||'Sin categoría',o:null,acc:(k)=>`Planifica 2 contenidos de la categoría «${k}» y compara sus resultados.`},

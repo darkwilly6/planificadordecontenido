@@ -136,7 +136,7 @@ function fxPromptClaude(){
     '- Hook: '+(g('f_hook')||'—')+(g('f_tg')?' (tipo de gancho: '+g('f_tg')+')':''),
     '- CTA: '+(g('f_cta')||'—'),
     '- Palabra clave: '+(g('f_key')||'ninguna'),
-    '- Enfoque: '+((ENF[E.enfoque]||{}).n||'—')+' · Etapa del embudo: '+((EMB[E.embudo]||{}).n||'—')+' · Pilar: '+(g('f_pilar')||'—')+' · Categoría: '+(g('f_cat')||'—'),
+    '- Enfoque: '+(g('f_enf')||'—')+' · Etapa del embudo: '+((EMB[E.embudo]||{}).n||'—')+' · Pilar: '+(g('f_pilar')||'—')+' · Categoría: '+(g('f_cat')||'—'),
     '- Referencia: '+(g('f_ref')||'—'),
     '- Objetivo: '+(g('f_obj')||'—'),
     '- Oferta de destino: '+(g('f_ofe')||'—'),
